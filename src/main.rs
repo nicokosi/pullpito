@@ -1,3 +1,25 @@
+use std::env;
+
 fn main() {
-    println!("Hello, world!");
+    let args: Vec<String> = env::args().collect();
+    let config = parse_config(&args);
+    println!("Computing stats for GitHub repo {}", config.repo);
+}
+
+struct Config {
+    repo: String,
+    token: Option<String>,
+}
+
+fn parse_config(args: &[String]) -> Config {
+    if args.len() < 1 {
+        panic!("Not enough arguments, expecting at least 1 argument");
+    }
+    let repo = args[1].clone();
+    let token = if args.len() == 2 {
+        None
+    } else {
+       Some(args[2].clone())
+    };
+    Config { repo, token }
 }
