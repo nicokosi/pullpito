@@ -1,0 +1,5 @@
+[package]
+name = "pullpito"
+version = "0.1.0"
+authors = ["Nicolas Kosinski <nicokosi@yahoo.com>"]
+
