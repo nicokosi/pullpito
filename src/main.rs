@@ -8,7 +8,7 @@ fn main() {
 
 struct Config {
     repo: String,
-    token: Option<String>,
+    token: Option<String>
 }
 
 fn parse_config(args: &[String]) -> Config {
@@ -17,9 +17,9 @@ fn parse_config(args: &[String]) -> Config {
     }
     let repo = args[1].clone();
     let token = if args.len() == 2 {
-        None
+        Some(args[1].clone())
     } else {
-       Some(args[2].clone())
+        None
     };
     Config { repo, token }
 }
