@@ -11,6 +11,7 @@ fn main() {
     println!("Computing stats for GitHub repo {} {}" , config.repo, token_info);
 }
 
+#[derive(Debug, PartialEq)]
 struct Config {
     repo: String,
     token: Option<String>
@@ -28,5 +29,33 @@ impl Config {
             None
         };
         Ok(Config { repo, token })
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use Config;
+
+    #[test]
+    fn parse_config_with_no_params() {
+        let args: Vec<String> = vec!["".to_string()];
+        assert_eq!(Config::new(&args), Err("Not enough arguments, expecting at least 1 argument"));
+    }
+
+    #[test]
+    fn parse_config_with_repo_param() {
+        let args: Vec<String> = vec!["".to_string(), "fakeRepo".to_string()];
+        let repo = "fakeRepo".to_string();
+        let token = None;
+        assert_eq!(Config::new(&args), Ok(Config { repo, token }));
+    }
+
+    #[test]
+    fn parse_config_with_repo_and_token_params() {
+        let args: Vec<String> = vec!["".to_string(), "fakeRepo".to_string(), "fakeToken".to_string()];
+        let repo = "fakeRepo".to_string();
+        let token = Some("fakeToken".to_string());
+        assert_eq!(Config::new(&args), Ok(Config { repo, token }));
     }
 }
