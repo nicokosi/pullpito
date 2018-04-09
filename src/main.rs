@@ -18,7 +18,7 @@ struct Config {
 
 impl Config {
     fn new(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 1 {
+        if args.len() < 2 {
             return Err("Not enough arguments, expecting at least 1 argument");
         }
         let repo = args[1].clone();
