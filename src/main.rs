@@ -7,7 +7,8 @@ fn main() {
         println!("Problem parsing arguments: {}", err);
         process::exit(1);
     });
-    println!("Computing stats for GitHub repo {}", config.repo);
+    let token_info = if config.token.is_some() { "with token" } else { "without token" };
+    println!("Computing stats for GitHub repo {} {}" , config.repo, token_info);
 }
 
 struct Config {
@@ -21,8 +22,8 @@ impl Config {
             return Err("Not enough arguments, expecting at least 1 argument");
         }
         let repo = args[1].clone();
-        let token = if args.len() == 2 {
-            Some(args[1].clone())
+        let token = if args.len() == 3 {
+            Some(args[2].clone())
         } else {
             None
         };
