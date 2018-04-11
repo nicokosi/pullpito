@@ -1,6 +1,14 @@
 use std::env;
 use std::process;
 
+extern crate futures;
+extern crate hyper;
+extern crate tokio_core;
+
+use futures::{Future};
+use hyper::{Client, Uri};
+use tokio_core::reactor::Core;
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let config = Config::new(&args).unwrap_or_else(|err| {
@@ -8,7 +16,21 @@ fn main() {
         process::exit(1);
     });
     let token_info = if config.token.is_some() { "with token" } else { "without token" };
+
+
+    let mut core = Core::new().unwrap();
+    let client = Client::new(&core.handle());
+
     println!("Computing stats for GitHub repo {} {}" , config.repo, token_info);
+    let url : Uri = "http://httpbin.org/response-headers?foo=bar".parse().unwrap();
+    let request = client.get(url)
+        .map(|res| {
+            println!("HTTP status {}" , res.status());
+        });
+
+    // request is a Future, futures are lazy, so must explicitly run
+    core.run(request).unwrap();
+
 }
 
 #[derive(Debug, PartialEq)]
