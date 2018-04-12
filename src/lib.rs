@@ -63,12 +63,11 @@ pub fn github_events(config: Config) {
         .connector(HttpsConnector::new(4, &core.handle()).unwrap())
         .build(&core.handle());
 
-    let url_as_str = "https://api.github.com/repos/".to_string() + &config.repo +
+    let url = "https://api.github.com/repos/".to_string() + &config.repo +
         "/events?access_token=" + &config.token.unwrap_or("".to_string()) + "&page=1";
-    let uri = url_as_str.parse().unwrap();
-    println!("github URL: {}", &uri);
-    let mut req = Request::new(Method::Get, uri);
+    let mut req = Request::new(Method::Get, url.parse().unwrap());
     req.headers_mut().set_raw("Accept", "application/vnd.github.v3+json");
+    println!("GitHub request: {:?}", &req);
 
     let request = client
         .request(req)
