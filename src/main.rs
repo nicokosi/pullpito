@@ -3,10 +3,12 @@ use std::process;
 
 extern crate futures;
 extern crate hyper;
+extern crate hyper_tls;
 extern crate tokio_core;
 
 use futures::{Future};
 use hyper::{Client, Method, Request};
+use hyper_tls::HttpsConnector;
 use tokio_core::reactor::Core;
 
 fn main() {
@@ -19,12 +21,15 @@ fn main() {
 
 
     let mut core = Core::new().unwrap();
-    let client = Client::new(&core.handle());
+    let client = Client::configure()
+        .connector(HttpsConnector::new(4, &core.handle()).unwrap())
+        .build(&core.handle());
 
     println!("Computing stats for GitHub repo {} {}" , config.repo, token_info);
     let url_as_str = "https://api.github.com/repos/".to_string() + &config.repo +
         "/events?access_token=" + &config.token.unwrap_or("".to_string()) + "&page=1";
     let uri = url_as_str.parse().unwrap();
+    println!("github URL: {}", &uri);
     let mut req = Request::new(Method::Get, uri);
     req.headers_mut().set_raw("Accept", "application/vnd.github.v3+json");
 
