@@ -6,7 +6,7 @@ extern crate hyper;
 extern crate tokio_core;
 
 use futures::{Future};
-use hyper::{Client, Uri};
+use hyper::{Client, Method, Request};
 use tokio_core::reactor::Core;
 
 fn main() {
@@ -22,8 +22,14 @@ fn main() {
     let client = Client::new(&core.handle());
 
     println!("Computing stats for GitHub repo {} {}" , config.repo, token_info);
-    let url : Uri = "http://httpbin.org/response-headers?foo=bar".parse().unwrap();
-    let request = client.get(url)
+    let url_as_str = "https://api.github.com/repos/".to_string() + &config.repo +
+        "/events?access_token=" + &config.token.unwrap_or("".to_string()) + "&page=1";
+    let uri = url_as_str.parse().unwrap();
+    let mut req = Request::new(Method::Get, uri);
+    req.headers_mut().set_raw("Accept", "application/vnd.github.v3+json");
+
+    let request = client
+        .request(req)
         .map(|res| {
             println!("HTTP status {}" , res.status());
         });
