@@ -4,15 +4,12 @@ Command-line for GitHub pull request statistics 🐙, similar to [hubstats](http
 
 Implemented while learning [Rust](https://www.rust-lang.org/) 🦀, reading [The Rust Programming Language](https://doc.rust-lang.org/stable/book/second-edition/) 🎓.
 
-## Run/Install
+## Run
 
-Run:
-```sh
-cargo run
-```
+In order to display pull request events for a public GitHub repository, run `cargo run $org/$repo`. Example: `cargo run python/peps`.
 
-Install:
-```sh
-cargo install
-~/.cargo/bin/pullpito
-```
+For a private GitHub repository, run `cargo run $org/$repo $token`.
+
+## Install
+
+Run `cargo install ~/.cargo/bin/pullpito`.
