@@ -1,4 +1,4 @@
-# pullpito
+# pullpito [![Build Status](https://travis-ci.org/nicokosi/pullpito.svg?branch=master)](https://travis-ci.org/nicokosi/pullpito)
 
 Command-line for GitHub pull request statistics 🐙, similar to [hubstats](https://github.com/nicokosi/hubstats).
 
