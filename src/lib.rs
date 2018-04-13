@@ -61,10 +61,11 @@ pub fn github_events(config: Config) {
     core.run(work).unwrap();
 }
 
-use Config;
-
 #[cfg(test)]
 mod test {
+
+    use Config;
+
     #[test]
     fn parse_config_with_no_params() {
         let args: Vec<String> = vec!["".to_string()];
