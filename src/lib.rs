@@ -61,6 +61,13 @@ pub fn github_events(config: Config) {
     core.run(work).unwrap();
 }
 
+#[derive(Debug, PartialEq)]
+struct GithubEvent {}
+
+fn raw_github_events(json: String) -> Vec<GithubEvent> {
+    return Vec::new();
+}
+
 #[cfg(test)]
 mod test {
 
@@ -87,4 +94,13 @@ mod test {
         let token = Some("fakeToken".to_string());
         assert_eq!(Config::new(&args), Ok(Config { repo, token }));
     }
+
+    use raw_github_events;
+
+    #[test]
+    fn parse_github_events() {
+        let events = include_str!("../test/github_events.json");
+        assert_eq!(raw_github_events(events.to_string()), Vec::new());
+    }
+
 }
