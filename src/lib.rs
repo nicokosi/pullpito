@@ -1,13 +1,15 @@
 extern crate futures;
 extern crate hyper;
 extern crate hyper_tls;
+extern crate serde_json;
 extern crate tokio_core;
 
-use futures::Future;
+use futures::{Future, Stream};
 use hyper::{Client, Method, Request};
 use hyper_tls::HttpsConnector;
+use serde_json::Value;
+use std::io;
 use tokio_core::reactor::Core;
-
 
 #[derive(Debug, PartialEq)]
 pub struct Config {
@@ -42,21 +44,27 @@ pub fn github_events(config: Config) {
     req.headers_mut().set_raw("Accept", "application/vnd.github.v3+json");
     req.headers_mut().set_raw("Host", "api.github.com");
     req.headers_mut().set_raw("User-Agent", "pullpito/0.1.0");
-    println!("GitHub request: {:?}", &req);
 
-    let request = client
+    let work = client
         .request(req)
-        .map(|res| {
+        .and_then(|res| {
             println!("HTTP status {}", res.status());
+            res.body().concat2().and_then(move |body| {
+                println!("Body found");
+                let v: Value = serde_json::from_slice(&body).map_err(|e| {
+                    io::Error::new(io::ErrorKind::Other, e)
+                })?;
+                println!("current IP address is {}", v["created_at"]);
+                Ok(())
+            })
         });
-
-    core.run(request).unwrap();
+    core.run(work).unwrap();
 }
+
+use Config;
 
 #[cfg(test)]
 mod test {
-    use Config;
-
     #[test]
     fn parse_config_with_no_params() {
         let args: Vec<String> = vec!["".to_string()];
