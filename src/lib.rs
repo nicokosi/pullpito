@@ -67,8 +67,13 @@ struct GithubEvent {
     pub opened_pr: u8
 }
 
-fn raw_github_events(json: String) -> Vec<GithubEvent> {
-    return Vec::new();
+fn raw_github_events(json: String) -> Result<Vec<GithubEvent>, String> {
+    let v: Value = serde_json::from_str(json.as_ref())
+        .map_err(|e| {
+            io::Error::new(io::ErrorKind::Other, e)
+        }).unwrap();
+    println!("current IP address is {}", v["actor"]);
+    return Ok(Vec::new());
 }
 
 #[cfg(test)]
@@ -106,11 +111,11 @@ mod test {
         let events = include_str!("../test/github_events.json");
         assert_eq!(
             raw_github_events(events.to_string()),
-            vec![
-                GithubEvent {author: "alice".to_string(), opened_pr: 1},
-                GithubEvent {author: "bob".to_string(), opened_pr: 2},
-                GithubEvent {author: "carol".to_string(), opened_pr: 1}
-            ]);
+            Ok(vec![
+                GithubEvent { author: "alice".to_string(), opened_pr: 1 },
+                GithubEvent { author: "bob".to_string(), opened_pr: 2 },
+                GithubEvent { author: "carol".to_string(), opened_pr: 1 }
+            ]));
     }
 
 }
