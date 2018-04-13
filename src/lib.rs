@@ -62,7 +62,10 @@ pub fn github_events(config: Config) {
 }
 
 #[derive(Debug, PartialEq)]
-struct GithubEvent {}
+struct GithubEvent {
+    pub author: String,
+    pub opened_pr: u8
+}
 
 fn raw_github_events(json: String) -> Vec<GithubEvent> {
     return Vec::new();
@@ -96,11 +99,18 @@ mod test {
     }
 
     use raw_github_events;
+    use GithubEvent;
 
     #[test]
     fn parse_github_events() {
         let events = include_str!("../test/github_events.json");
-        assert_eq!(raw_github_events(events.to_string()), Vec::new());
+        assert_eq!(
+            raw_github_events(events.to_string()),
+            vec![
+                GithubEvent {author: "alice".to_string(), opened_pr: 1},
+                GithubEvent {author: "bob".to_string(), opened_pr: 2},
+                GithubEvent {author: "carol".to_string(), opened_pr: 1}
+            ]);
     }
 
 }
