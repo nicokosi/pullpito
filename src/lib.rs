@@ -1,17 +1,18 @@
 extern crate futures;
 extern crate hyper;
 extern crate hyper_tls;
+extern crate serde;
 extern crate serde_json;
 extern crate tokio_core;
+#[macro_use] extern crate serde_derive;
 
 use futures::{Future, Stream};
 use hyper::{Client, Method, Request};
 use hyper_tls::HttpsConnector;
-use serde_json::Value;
-use std::io;
+use serde_json::{Error};
 use tokio_core::reactor::Core;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Config {
     pub repo: String,
     pub token: Option<String>,
@@ -28,7 +29,7 @@ impl Config {
         } else {
             None
         };
-        Ok(Config { repo, token })
+        Ok(Config { repo, token})
     }
 }
 
@@ -49,13 +50,10 @@ pub fn github_events(config: Config) {
         .request(req)
         .and_then(|res| {
             println!("HTTP status {}", res.status());
-            res.body().concat2().and_then(move |body| {
+            res.body().concat2().and_then(move |_body| {
                 println!("Body found");
-                let v: Value = serde_json::from_slice(&body).map_err(|e| {
-                    io::Error::new(io::ErrorKind::Other, e)
-                })?;
-                println!("current IP address is {}", v["created_at"]);
-                Ok(())
+                let _events = raw_github_events("".to_string());
+                Ok("")
             })
         });
     core.run(work).unwrap();
@@ -67,13 +65,13 @@ struct GithubEvent {
     pub opened_pr: u8
 }
 
-fn raw_github_events(json: String) -> Result<Vec<GithubEvent>, String> {
-    let v: Value = serde_json::from_str(json.as_ref())
-        .map_err(|e| {
-            io::Error::new(io::ErrorKind::Other, e)
-        }).unwrap();
-    println!("current IP address is {}", v["actor"]);
-    return Ok(Vec::new());
+#[derive(Debug, Deserialize, PartialEq)]
+struct GithubRawEvent {
+    pub id: String
+}
+
+fn raw_github_events(json: String) -> Result<Vec<GithubRawEvent>, Error> {
+    return serde_json::from_str::<Vec<GithubRawEvent>>(&json);
 }
 
 #[cfg(test)]
@@ -104,18 +102,14 @@ mod test {
     }
 
     use raw_github_events;
-    use GithubEvent;
+    use GithubRawEvent;
 
     #[test]
     fn parse_github_events() {
         let events = include_str!("../test/github_events.json");
         assert_eq!(
-            raw_github_events(events.to_string()),
-            Ok(vec![
-                GithubEvent { author: "alice".to_string(), opened_pr: 1 },
-                GithubEvent { author: "bob".to_string(), opened_pr: 2 },
-                GithubEvent { author: "carol".to_string(), opened_pr: 1 }
-            ]));
+            raw_github_events(events.to_string()).unwrap()[0],
+            GithubRawEvent { id: "1".to_string() });
     }
 
 }
