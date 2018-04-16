@@ -9,7 +9,7 @@ extern crate tokio_core;
 use futures::{Future, Stream};
 use hyper::{Client, Method, Request};
 use hyper_tls::HttpsConnector;
-use serde_json::{Error};
+use serde_json::Error;
 use tokio_core::reactor::Core;
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
@@ -26,7 +26,7 @@ impl Config {
         } else {
             None
         };
-        Ok(Config { repo, token})
+        Ok(Config { repo, token })
     }
 }
 
@@ -57,10 +57,11 @@ pub fn github_events(config: Config) {
 }
 
 #[derive(Debug, PartialEq)]
-struct GithubEvent { author: String, opened_pr: u8}
+struct GithubEvent { author: String, opened_pr: u8 }
 
 #[derive(Debug, Deserialize, PartialEq)]
 struct RawEvent { actor: Actor }
+
 #[derive(Debug, Deserialize, PartialEq)]
 struct Actor { login: String }
 
@@ -70,39 +71,35 @@ fn raw_github_events(json: String) -> Result<Vec<RawEvent>, Error> {
 
 #[cfg(test)]
 mod test {
-
     use Config;
 
     #[test]
     fn parse_config_with_no_params() {
-        let args: Vec<String> = vec!["".to_string()];
-        assert_eq!(Config::new(&args), Err("Not enough arguments, expecting at least 1 argument"));
+        assert_eq!(
+            Config::new(&vec!["".to_string()]),
+            Err("Not enough arguments, expecting at least 1 argument"));
     }
 
     #[test]
     fn parse_config_with_repo_param() {
-        let args: Vec<String> = vec!["".to_string(), "fakeRepo".to_string()];
-        let repo = "fakeRepo".to_string();
-        let token = None;
-        assert_eq!(Config::new(&args), Ok(Config { repo, token }));
+        assert_eq!(
+            Config::new(&vec!["".to_string(), "fakeRepo".to_string()]),
+            Ok(Config { repo: "fakeRepo".to_string(), token: None }));
     }
 
     #[test]
     fn parse_config_with_repo_and_token_params() {
-        let args: Vec<String> = vec!["".to_string(), "fakeRepo".to_string(), "fakeToken".to_string()];
-        let repo = "fakeRepo".to_string();
-        let token = Some("fakeToken".to_string());
-        assert_eq!(Config::new(&args), Ok(Config { repo, token }));
+        assert_eq!(
+            Config::new(&vec!["".to_string(), "fakeRepo".to_string(), "fakeToken".to_string()]),
+            Ok(Config { repo: "fakeRepo".to_string(), token: Some("fakeToken".to_string()) }));
     }
 
     use {raw_github_events, RawEvent, Actor};
 
     #[test]
     fn parse_github_events() {
-        let events = include_str!("../test/github_events.json");
         assert_eq!(
-            raw_github_events(events.to_string()).unwrap()[0],
+            raw_github_events(include_str!("../test/github_events.json").to_string()).unwrap()[0],
             RawEvent { actor: Actor { login: "alice".to_string() } });
     }
-
 }
