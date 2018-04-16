@@ -1,9 +1,9 @@
 extern crate futures;
 extern crate hyper;
 extern crate hyper_tls;
-extern crate serde;
 extern crate serde_json;
 extern crate tokio_core;
+
 #[macro_use] extern crate serde_derive;
 
 use futures::{Future, Stream};
@@ -13,10 +13,7 @@ use serde_json::{Error};
 use tokio_core::reactor::Core;
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct Config {
-    pub repo: String,
-    pub token: Option<String>,
-}
+pub struct Config { pub repo: String, pub token: Option<String> }
 
 impl Config {
     pub fn new(args: &[String]) -> Result<Config, &'static str> {
@@ -60,18 +57,15 @@ pub fn github_events(config: Config) {
 }
 
 #[derive(Debug, PartialEq)]
-struct GithubEvent {
-    pub author: String,
-    pub opened_pr: u8
-}
+struct GithubEvent { author: String, opened_pr: u8}
 
 #[derive(Debug, Deserialize, PartialEq)]
-struct GithubRawEvent {
-    pub id: String
-}
+struct RawEvent { actor: Actor }
+#[derive(Debug, Deserialize, PartialEq)]
+struct Actor { login: String }
 
-fn raw_github_events(json: String) -> Result<Vec<GithubRawEvent>, Error> {
-    return serde_json::from_str::<Vec<GithubRawEvent>>(&json);
+fn raw_github_events(json: String) -> Result<Vec<RawEvent>, Error> {
+    return serde_json::from_str::<Vec<RawEvent>>(&json);
 }
 
 #[cfg(test)]
@@ -101,15 +95,14 @@ mod test {
         assert_eq!(Config::new(&args), Ok(Config { repo, token }));
     }
 
-    use raw_github_events;
-    use GithubRawEvent;
+    use {raw_github_events, RawEvent, Actor};
 
     #[test]
     fn parse_github_events() {
         let events = include_str!("../test/github_events.json");
         assert_eq!(
             raw_github_events(events.to_string()).unwrap()[0],
-            GithubRawEvent { id: "1".to_string() });
+            RawEvent { actor: Actor { login: "alice".to_string() } });
     }
 
 }
