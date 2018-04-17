@@ -1,3 +1,4 @@
+extern crate chrono;
 extern crate futures;
 extern crate hyper;
 extern crate hyper_tls;
@@ -12,6 +13,7 @@ use hyper::{Client, Method, Request};
 use hyper_tls::HttpsConnector;
 use serde_json::Error;
 use tokio_core::reactor::Core;
+use chrono::{DateTime, Utc};
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Config {
@@ -71,7 +73,7 @@ struct RawEvent {
     payload: Payload,
     #[serde(rename = "type")]
     event_type: Type,
-    created_at: String,
+    created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -104,6 +106,7 @@ fn raw_github_events(json: String) -> Result<Vec<RawEvent>, Error> {
 #[cfg(test)]
 mod test {
     use Config;
+    use chrono::{TimeZone, Utc};
 
     #[test]
     fn parse_config_with_no_params() {
@@ -153,7 +156,7 @@ mod test {
                     action: Action::opened,
                 },
                 event_type: Type::PullRequestEvent,
-                created_at: "2016-12-01T16:26:43Z".to_string(),
+                created_at: Utc.ymd(2016, 12, 1).and_hms(16, 26, 43),
             }
         );
     }
