@@ -68,11 +68,33 @@ struct GithubEvent {
 #[derive(Debug, Deserialize, PartialEq)]
 struct RawEvent {
     actor: Actor,
+    payload: Payload,
+    #[serde(rename = "type")]
+    event_type: Type,
+    created_at: String,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
 struct Actor {
     login: String,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+struct Payload {
+    action: Action,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+enum Action {
+    opened,
+    created,
+    closed,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+enum Type {
+    PullRequestEvent,
+    PullRequestReviewCommentEvent,
 }
 
 fn raw_github_events(json: String) -> Result<Vec<RawEvent>, Error> {
@@ -117,7 +139,7 @@ mod test {
         );
     }
 
-    use {raw_github_events, Actor, RawEvent};
+    use {raw_github_events, Action, Actor, Payload, RawEvent, Type};
 
     #[test]
     fn parse_github_events() {
@@ -127,6 +149,11 @@ mod test {
                 actor: Actor {
                     login: "alice".to_string(),
                 },
+                payload: Payload {
+                    action: Action::opened,
+                },
+                event_type: Type::PullRequestEvent,
+                created_at: "2016-12-01T16:26:43Z".to_string(),
             }
         );
     }
