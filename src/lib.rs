@@ -88,8 +88,11 @@ struct Payload {
 
 #[derive(Debug, Deserialize, PartialEq)]
 enum Action {
+    #[allow(non_camel_case_types)]
     opened,
+    #[allow(non_camel_case_types)]
     created,
+    #[allow(non_camel_case_types)]
     closed,
 }
 
