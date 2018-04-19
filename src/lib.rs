@@ -36,6 +36,8 @@ impl Config {
     }
 }
 
+use std::io::{self, Write};
+
 pub fn github_events(config: Config) {
     let mut core = Core::new().unwrap();
     let client = Client::configure()
@@ -50,21 +52,33 @@ pub fn github_events(config: Config) {
     req.headers_mut().set_raw("Host", "api.github.com");
     req.headers_mut().set_raw("User-Agent", "pullpito/0.1.0");
 
-    let work = client.request(req).and_then(|res| {
-        println!("HTTP status {}", res.status());
-        res.body().concat2().and_then(move |_body| {
-            println!("Body found");
-            let _events = raw_github_events("".to_string());
-            Ok("")
-        })
-    });
-    core.run(work).unwrap();
-}
+    let work = client
+        .request(req)
+        .and_then(|res| {
+            println!("Response: {}", res.status());
+            res.body().for_each(|chunk| {
+                io::stdout()
+                    .write_all(&chunk)
+                    .map(|_| ())
+                    .map_err(From::from)
+            })
+        });
+    /*
+            client.request(req).and_then(|res| {
+            println!("Response: {}", res.status());
+            println!("Headers: {:#?}", res.headers());
 
-#[derive(Debug, PartialEq)]
-struct GithubEvent {
-    author: String,
-    opened_pr: u8,
+            res.into_body().for_each(|chunk| {
+                io::stdout().write_all(&chunk)
+                    .map_err(|e| panic!("example expects stdout is open, error={}", e))
+            })
+        }).map(|_| {
+            println!("\n\nDone.");
+        }).map_err(|err| {
+            eprintln!("Error {}", err);
+})
+    */
+    core.run(work).unwrap();
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
