@@ -36,7 +36,7 @@ impl Config {
     }
 }
 
-use std::io::{self, Write};
+use std::str;
 
 pub fn github_events(config: Config) {
     let mut core = Core::new().unwrap();
@@ -52,32 +52,17 @@ pub fn github_events(config: Config) {
     req.headers_mut().set_raw("Host", "api.github.com");
     req.headers_mut().set_raw("User-Agent", "pullpito/0.1.0");
 
-    let work = client
-        .request(req)
-        .and_then(|res| {
-            println!("Response: {}", res.status());
-            res.body().for_each(|chunk| {
-                io::stdout()
-                    .write_all(&chunk)
-                    .map(|_| ())
-                    .map_err(From::from)
-            })
-        });
-    /*
-            client.request(req).and_then(|res| {
-            println!("Response: {}", res.status());
-            println!("Headers: {:#?}", res.headers());
+    println!("Request: {:?}", &req);
+    let work = client.request(req).and_then(|res| {
+        println!("Response: {}", res.status());
+        res.body().concat2().and_then(move |body| {
+            let raw_events : serde_json::Value = serde_json::from_slice(&body).unwrap();
+            println!("JSON: {:?}", raw_events);
+            println!("Raw GitHub events: {:?}", raw_github_events(raw_events.to_string()).unwrap());
+            Ok(())
+        })
+    });
 
-            res.into_body().for_each(|chunk| {
-                io::stdout().write_all(&chunk)
-                    .map_err(|e| panic!("example expects stdout is open, error={}", e))
-            })
-        }).map(|_| {
-            println!("\n\nDone.");
-        }).map_err(|err| {
-            eprintln!("Error {}", err);
-})
-    */
     core.run(work).unwrap();
 }
 
