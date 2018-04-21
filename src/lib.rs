@@ -97,6 +97,8 @@ enum Action {
 
 #[derive(Debug, Deserialize, PartialEq)]
 enum Type {
+    CreateEvent,
+    PushEvent,
     PullRequestEvent,
     PullRequestReviewCommentEvent,
 }
@@ -161,5 +163,12 @@ mod test {
                 created_at: Utc.ymd(2016, 12, 1).and_hms(16, 26, 43),
             }
         );
+    }
+
+    #[test]
+    fn parse_real_github_events() {
+        let events = raw_github_events(
+            include_str!("../test/pullpito_github_events.json").to_string());
+        assert!(events.is_ok());
     }
 }
