@@ -82,7 +82,7 @@ struct Actor {
 
 #[derive(Debug, Deserialize, PartialEq)]
 struct Payload {
-    action: Action,
+    action: Option<Action>,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -98,6 +98,7 @@ enum Action {
 #[derive(Debug, Deserialize, PartialEq)]
 enum Type {
     CreateEvent,
+    IssueCommentEvent,
     PushEvent,
     PullRequestEvent,
     PullRequestReviewCommentEvent,
@@ -157,7 +158,7 @@ mod test {
                     login: "alice".to_string(),
                 },
                 payload: Payload {
-                    action: Action::opened,
+                    action: Some(Action::opened),
                 },
                 event_type: Type::PullRequestEvent,
                 created_at: Utc.ymd(2016, 12, 1).and_hms(16, 26, 43),
