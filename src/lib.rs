@@ -36,6 +36,8 @@ impl Config {
     }
 }
 
+use std::str;
+
 pub fn github_events(config: Config) {
     let mut core = Core::new().unwrap();
     let client = Client::configure()
@@ -50,21 +52,18 @@ pub fn github_events(config: Config) {
     req.headers_mut().set_raw("Host", "api.github.com");
     req.headers_mut().set_raw("User-Agent", "pullpito/0.1.0");
 
+    println!("Request: {:?}", &req);
     let work = client.request(req).and_then(|res| {
-        println!("HTTP status {}", res.status());
-        res.body().concat2().and_then(move |_body| {
-            println!("Body found");
-            let _events = raw_github_events("".to_string());
-            Ok("")
+        println!("Response: {}", res.status());
+        res.body().concat2().and_then(move |body| {
+            let raw_events : serde_json::Value = serde_json::from_slice(&body).unwrap();
+            println!("JSON: {:?}", raw_events);
+            println!("Raw GitHub events: {:?}", raw_github_events(raw_events.to_string()).unwrap());
+            Ok(())
         })
     });
-    core.run(work).unwrap();
-}
 
-#[derive(Debug, PartialEq)]
-struct GithubEvent {
-    author: String,
-    opened_pr: u8,
+    core.run(work).unwrap();
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
