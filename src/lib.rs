@@ -56,9 +56,12 @@ pub fn github_events(config: Config) {
     let work = client.request(req).and_then(|res| {
         println!("Response: {}", res.status());
         res.body().concat2().and_then(move |body| {
-            let raw_events : serde_json::Value = serde_json::from_slice(&body).unwrap();
+            let raw_events: serde_json::Value = serde_json::from_slice(&body).unwrap();
             println!("JSON: {:?}", raw_events);
-            println!("Raw GitHub events: {:?}", raw_github_events(raw_events.to_string()).unwrap());
+            println!(
+                "Raw GitHub events: {:?}",
+                raw_github_events(raw_events.to_string()).unwrap()
+            );
             Ok(())
         })
     });
@@ -88,20 +91,56 @@ struct Payload {
 #[derive(Debug, Deserialize, PartialEq)]
 enum Action {
     #[allow(non_camel_case_types)]
-    opened,
-    #[allow(non_camel_case_types)]
     created,
     #[allow(non_camel_case_types)]
     closed,
+    #[allow(non_camel_case_types)]
+    edited,
+    #[allow(non_camel_case_types)]
+    opened,
+    #[allow(non_camel_case_types)]
+    started,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
 enum Type {
+    CommitCommentEvent,
     CreateEvent,
+    DeleteEvent,
+    DeploymentEvent,
+    DeploymentStatusEvent,
+    DownloadEvent,
+    FollowEvent,
+    ForkEvent,
+    ForkApplyEvent,
+    GistEvent,
+    GollumEvent,
+    InstallationEvent,
+    InstallationRepositoriesEvent,
     IssueCommentEvent,
-    PushEvent,
+    IssuesEvent,
+    LabelEvent,
+    MarketplacePurchaseEvent,
+    MemberEvent,
+    MembershipEvent,
+    MilestoneEvent,
+    OrganizationEvent,
+    OrgBlockEvent,
+    PageBuildEvent,
+    ProjectCardEvent,
+    ProjectColumnEvent,
+    ProjectEvent,
+    PublicEvent,
     PullRequestEvent,
+    PullRequestReviewEvent,
     PullRequestReviewCommentEvent,
+    PushEvent,
+    ReleaseEvent,
+    RepositoryEvent,
+    StatusEvent,
+    TeamEvent,
+    TeamAddEvent,
+    WatchEvent,
 }
 
 fn raw_github_events(json: String) -> Result<Vec<RawEvent>, Error> {
@@ -167,9 +206,16 @@ mod test {
     }
 
     #[test]
-    fn parse_real_github_events() {
-        let events = raw_github_events(
-            include_str!("../test/pullpito_github_events.json").to_string());
+    fn parse_real_github_events_from_nicokosi_pullpito() {
+        let events =
+            raw_github_events(include_str!("../test/pullpito_github_events.json").to_string());
+        assert!(events.is_ok());
+    }
+
+    #[test]
+    fn parse_real_github_events_from_python_peps() {
+        let events =
+            raw_github_events(include_str!("../test/python_peps_github_events.json").to_string());
         assert!(events.is_ok());
     }
 }
