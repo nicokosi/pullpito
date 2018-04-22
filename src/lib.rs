@@ -54,14 +54,13 @@ pub fn github_events(config: Config) {
 
     println!("Request: {:?}", &req);
     let work = client.request(req).and_then(|res| {
-        println!("Response: {}", res.status());
         res.body().concat2().and_then(move |body| {
-            let raw_events: serde_json::Value = serde_json::from_slice(&body).unwrap();
-            println!("JSON: {:?}", raw_events);
-            println!(
-                "Raw GitHub events: {:?}",
-                raw_github_events(raw_events.to_string()).unwrap()
-            );
+            let raw_events_as_json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+            let raw_events = raw_github_events(raw_events_as_json.to_string());
+            raw_events.unwrap().iter()
+                .filter(| e | e.event_type == Type::PullRequestEvent && e.payload.action == Some(Action::created))
+                .collect::<Vec<RawEvent>>()
+                .size();
             Ok(())
         })
     });
