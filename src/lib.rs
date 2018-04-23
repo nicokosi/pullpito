@@ -57,12 +57,9 @@ pub fn github_events(config: Config) {
         res.body().concat2().and_then(move |body| {
             let raw_events_as_json: serde_json::Value = serde_json::from_slice(&body).unwrap();
             let raw_events = raw_github_events(raw_events_as_json.to_string());
-            let events : Vec<RawEvent> = raw_events
-                .unwrap()
-                .into_iter()
-                .filter(| e | e.event_type == Type::PullRequestEvent && e.payload.action == Some(Action::opened))
-                .collect();
-            println!("Number of opened pull requests: {:?}", events.len());
+            let events_per_author: HashMap<String, Vec<RawEvent>> =
+                events_per_author(raw_events.unwrap());
+            println!("Opened pull requests: {:?}", events_per_author);
             Ok(())
         })
     });
@@ -70,7 +67,21 @@ pub fn github_events(config: Config) {
     core.run(work).unwrap();
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+use std::collections::HashMap;
+
+fn events_per_author(events: Vec<RawEvent>) -> HashMap<String, Vec<RawEvent>> {
+    return events
+        .into_iter()
+        .filter(|e| {
+            e.event_type == Type::PullRequestEvent && e.payload.action == Some(Action::opened)
+        })
+        .fold(HashMap::new(), |mut acc, event: RawEvent| {
+            (*acc.entry(event.actor.login.clone()).or_insert(Vec::new())).push(event);
+            acc
+        });
+}
+
+#[derive(Debug, Deserialize, Eq, PartialEq)]
 struct RawEvent {
     actor: Actor,
     payload: Payload,
@@ -79,17 +90,17 @@ struct RawEvent {
     created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, Eq, PartialEq)]
 struct Actor {
     login: String,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, Eq, PartialEq)]
 struct Payload {
     action: Option<Action>,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, Eq, PartialEq)]
 enum Action {
     #[allow(non_camel_case_types)]
     created,
@@ -103,7 +114,7 @@ enum Action {
     started,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, Eq, PartialEq)]
 enum Type {
     CommitCommentEvent,
     CreateEvent,
@@ -219,4 +230,15 @@ mod test {
             raw_github_events(include_str!("../test/python_peps_github_events.json").to_string());
         assert!(events.is_ok());
     }
+
+    use events_per_author;
+
+    #[test]
+    fn compute_events_per_author() {
+        let events = events_per_author(
+            raw_github_events(include_str!("../test/github_events.json").to_string()).unwrap(),
+        );
+        assert!(events.get("alice").into_iter().len() == 1);
+    }
+
 }
