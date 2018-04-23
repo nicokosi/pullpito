@@ -57,10 +57,12 @@ pub fn github_events(config: Config) {
         res.body().concat2().and_then(move |body| {
             let raw_events_as_json: serde_json::Value = serde_json::from_slice(&body).unwrap();
             let raw_events = raw_github_events(raw_events_as_json.to_string());
-            raw_events.unwrap().iter()
-                .filter(| e | e.event_type == Type::PullRequestEvent && e.payload.action == Some(Action::created))
-                .collect::<Vec<RawEvent>>()
-                .size();
+            let events : Vec<RawEvent> = raw_events
+                .unwrap()
+                .into_iter()
+                .filter(| e | e.event_type == Type::PullRequestEvent && e.payload.action == Some(Action::opened))
+                .collect();
+            println!("Number of opened pull requests: {:?}", events.len());
             Ok(())
         })
     });
