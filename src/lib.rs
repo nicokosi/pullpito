@@ -2,9 +2,12 @@ extern crate chrono;
 extern crate futures;
 extern crate hyper;
 extern crate hyper_tls;
+extern crate regex;
 extern crate serde_json;
 extern crate tokio_core;
 
+#[macro_use]
+extern crate log;
 #[macro_use]
 extern crate serde_derive;
 
@@ -37,6 +40,7 @@ impl Config {
 }
 
 use std::str;
+use regex::Regex;
 
 pub fn github_events(config: Config) {
     let mut core = Core::new().unwrap();
@@ -44,13 +48,20 @@ pub fn github_events(config: Config) {
         .connector(HttpsConnector::new(4, &core.handle()).unwrap())
         .build(&core.handle());
 
-    let url = "https://api.github.com/repos/".to_string() + &config.repo + "/events?access_token="
-        + &config.token.unwrap_or("".to_string()) + "&page=1";
+    let url = "https://api.github.com/repos/".to_string() + &config.repo
+        + "/events?&page=1&access_token=" + &config.token.unwrap_or("".to_string());
     let mut req = Request::new(Method::Get, url.parse().unwrap());
     req.headers_mut()
         .set_raw("Accept", "application/vnd.github.v3+json");
     req.headers_mut().set_raw("Host", "api.github.com");
     req.headers_mut().set_raw("User-Agent", "pullpito/0.1.0");
+
+    let safe_url = Regex::new(r"(?P<safe_url>\w+)&access_token=(?P<token>\w+)").unwrap();
+    let unsafe_url = req.uri().to_string();
+    debug!(
+        "GitHub request: {:?}",
+        safe_url.replace(&unsafe_url, "${safe_url}")
+    );
 
     let repo = config.repo;
 

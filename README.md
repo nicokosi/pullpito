@@ -31,6 +31,11 @@ pull requests for "python/peps" ->
 
 For a private GitHub repository, run `cargo run $org/$repo $token`.
 
+### Run with debug
+
+```sh
+RUST_LOG=pullpito=debug cargo run nicokosi/pullpito
+```
 
 ## Install
 
