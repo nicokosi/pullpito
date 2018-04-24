@@ -9,16 +9,5 @@ fn main() {
         println!("Problem parsing arguments: {}", err);
         process::exit(1);
     });
-
-    let token_info = if config.token.is_some() {
-        "with token"
-    } else {
-        "without token"
-    };
-    println!(
-        "Computing stats for GitHub repo {} {}",
-        config.repo, token_info
-    );
-
     pullpito::github_events(config);
 }

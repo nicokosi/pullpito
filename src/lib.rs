@@ -52,35 +52,45 @@ pub fn github_events(config: Config) {
     req.headers_mut().set_raw("Host", "api.github.com");
     req.headers_mut().set_raw("User-Agent", "pullpito/0.1.0");
 
+    let repo = config.repo;
+
     let work = client.request(req).and_then(|res| {
         res.body().concat2().and_then(move |body| {
             let raw_events_as_json: serde_json::Value = serde_json::from_slice(&body).unwrap();
             let raw_events = raw_github_events(raw_events_as_json.to_string());
             let events_per_author: HashMap<String, Vec<RawEvent>> =
                 events_per_author(raw_events.unwrap());
+            println!("pull requests for {:?} ->", repo);
+            print!("\topened per author: {{ ");
             for (author, events) in events_per_author.iter() {
                 let opened_pull_requests = events.into_iter()
                     .filter(|e| {
                         e.event_type == Type::PullRequestEvent
                             && e.payload.action == Some(Action::opened)})
                     .count();
+                print!("\"{}\" {} ", author, opened_pull_requests);
+            }
+            println!(" }}");
+            print!("\tcommented per author: {{ ");
+            for (author, events) in events_per_author.iter() {
                 let commented_pull_requests = events.into_iter()
                     .filter(|e| {
                         e.event_type == Type::PullRequestEvent
                             && e.payload.action == Some(Action::closed)})
                     .count();
+                print!("\"{}\" {} ", author, commented_pull_requests);
+            }
+            println!(" }}");
+            print!("\tclosed per author: {{ ");
+            for (author, events) in events_per_author.iter() {
                 let closed_pull_requests = events.into_iter()
                     .filter(|e| {
                         e.event_type == Type::PullRequestReviewCommentEvent
                             && e.payload.action == Some(Action::created)})
                     .count();
-                println!(" {} has opened {} / commented {} / closed {} pull requests",
-                         author,
-                         opened_pull_requests,
-                         commented_pull_requests,
-                         closed_pull_requests
-                );
+                print!("\"{}\" {} ", author, closed_pull_requests);
             }
+            println!("}}");
             Ok(())
         })
     });
