@@ -69,8 +69,8 @@ pub fn github_events(config: Config) {
 }
 
 fn printable(repo: String, events_per_author: HashMap<String, Vec<RawEvent>>) -> String {
-    let mut out: String = format!("pull requests for {:?} ->", repo);
-    out.push_str("\topened per author: { ");
+    let mut out: String = format!("pull requests for {:?} ->\n", repo);
+    out.push_str("  opened per author:\n");
     for (author, events) in events_per_author.iter() {
         let opened_pull_requests = events
             .into_iter()
@@ -78,10 +78,11 @@ fn printable(repo: String, events_per_author: HashMap<String, Vec<RawEvent>>) ->
                 e.event_type == Type::PullRequestEvent && e.payload.action == Some(Action::opened)
             })
             .count();
-        out.push_str(&format!("\"{}\" {}", author, opened_pull_requests));
+        if opened_pull_requests > 0 {
+            out.push_str(&format!("    {}: {}\n", author, opened_pull_requests));
+        }
     }
-    out.push_str(" }");
-    out.push_str("\tcommented per author: { ");
+    out.push_str("  commented per author:\n");
     for (author, events) in events_per_author.iter() {
         let commented_pull_requests = events
             .into_iter()
@@ -89,10 +90,11 @@ fn printable(repo: String, events_per_author: HashMap<String, Vec<RawEvent>>) ->
                 e.event_type == Type::IssueCommentEvent && e.payload.action == Some(Action::created)
             })
             .count();
-        out.push_str(&format!("\"{}\" {}", author, commented_pull_requests));
+        if commented_pull_requests > 0 {
+            out.push_str(&format!("    {}: {}\n", author, commented_pull_requests));
+        }
     }
-    out.push_str(" }");
-    out.push_str("\tclosed per author: { ");
+    out.push_str("  closed per author:\n");
     for (author, events) in events_per_author.iter() {
         let closed_pull_requests = events
             .into_iter()
@@ -100,9 +102,10 @@ fn printable(repo: String, events_per_author: HashMap<String, Vec<RawEvent>>) ->
                 e.event_type == Type::PullRequestEvent && e.payload.action == Some(Action::closed)
             })
             .count();
-        out.push_str(&format!("\"{}\" {}", author, closed_pull_requests));
+        if closed_pull_requests > 0 {
+            out.push_str(&format!("    {}: {}\n", author, closed_pull_requests));
+        }
     }
-    out.push_str(" }");
     return out.to_string();
 }
 
@@ -279,7 +282,7 @@ mod test {
         let events = events_per_author(
             raw_github_events(include_str!("../test/github_events.json").to_string()).unwrap(),
         );
-        assert!(events.get("alice").into_iter().len() == 1);
+        assert_eq!(events.get("alice").into_iter().len(), 1);
     }
 
     use std::collections::HashMap;
@@ -306,9 +309,9 @@ mod test {
 
         let out = printable("repo".to_string(), events);
 
-        assert!(out.contains("opened per author: { \"alice\" 1 }"));
-        assert!(out.contains("commented per author: { \"alice\" 0 }"));
-        assert!(out.contains("closed per author: { \"alice\" 0 }"));
+        assert!(out.contains("opened per author:\n    alice: 1"));
+        assert_eq!(out.contains("commented per author:\n    alice: "), false);
+        assert_eq!(out.contains("closed per author:\n    alice: "), false);
     }
 
     #[test]
@@ -332,9 +335,9 @@ mod test {
 
         let out = printable("repo".to_string(), events);
 
-        assert!(out.contains("opened per author: { \"alice\" 0 }"));
-        assert!(out.contains("commented per author: { \"alice\" 1 }"));
-        assert!(out.contains("closed per author: { \"alice\" 0 }"));
+        assert_eq!(out.contains("opened per author:\n    alice: "), false);
+        assert!(out.contains("commented per author:\n    alice: 1"));
+        assert_eq!(out.contains("closed per author:\n    alice: "), false);
     }
 
     #[test]
@@ -358,9 +361,9 @@ mod test {
 
         let out = printable("repo".to_string(), events);
 
-        assert!(out.contains("opened per author: { \"alice\" 0 }"));
-        assert!(out.contains("commented per author: { \"alice\" 0 }"));
-        assert!(out.contains("closed per author: { \"alice\" 1 }"));
+        assert_eq!(out.contains("opened per author:\n    alice: "), false);
+        assert_eq!(out.contains("commented per author:\n    alice: "), false);
+        assert!(out.contains("closed per author:\n    alice: 1"));
     }
 
 }

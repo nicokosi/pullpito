@@ -12,12 +12,21 @@ In order to display pull request events for a public GitHub repository, run `car
 Example:
 
 ```sh
-cargo run --quiet python/peps
-
 pull requests for "python/peps" ->
-     opened per author: { "Rosuav" 0 "pitrou" 0 "ncoghlan" 1 "jseakle" 1 "yoavcaspi" 1  }
-     commented per author: { "Rosuav" 1 "pitrou" 1 "ncoghlan" 1 "jseakle" 0 "yoavcaspi" 0  }
-     closed per author: { "Rosuav" 0 "pitrou" 0 "ncoghlan" 0 "jseakle" 0 "yoavcaspi" 0 }
+  opened per author: {
+    Harmon758: 2
+  }
+  commented per author: {
+    gvanrossum: 1
+    zware: 2
+    mcepl: 1
+    ned-deily: 1
+    warsaw: 1
+    encukou: 2
+  }
+  closed per author: {
+    zware: 2
+  }
 ```
 
 For a private GitHub repository, run `cargo run $org/$repo $token`.
