@@ -1,11 +1,10 @@
+extern crate env_logger;
 #[macro_use]
 extern crate log;
+extern crate pullpito;
 
 use std::env;
 use std::process;
-
-extern crate env_logger;
-extern crate pullpito;
 
 fn main() {
     env_logger::init();
