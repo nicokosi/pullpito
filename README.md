@@ -9,24 +9,21 @@ Implemented while learning [Rust](https://www.rust-lang.org/) 🦀, reading [The
 
 In order to display pull request events for a public GitHub repository, run `cargo run $org/$repo`.
 
-Example:
-
-```sh
+For instance, running `cargo run --quiet python/peps` will display:
+```
 pull requests for "python/peps" ->
-  opened per author: {
-    Harmon758: 2
-  }
-  commented per author: {
-    gvanrossum: 1
-    zware: 2
-    mcepl: 1
-    ned-deily: 1
-    warsaw: 1
-    encukou: 2
-  }
-  closed per author: {
-    zware: 2
-  }
+  opened per author:
+    ilevkivskyi: 1
+    zhsj: 1
+    jdemeyer: 2
+    egaudry: 1
+  commented per author:
+    the-knights-who-say-ni: 1
+    Rosuav: 1
+  closed per author:
+    ilevkivskyi: 1
+    methane: 1
+    Rosuav: 3
 ```
 
 For a private GitHub repository, run `cargo run $org/$repo $token`.

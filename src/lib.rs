@@ -32,7 +32,6 @@ use std::collections::HashMap;
 use github_events::{github_events as _github_events, Action, RawEvent, Type};
 
 pub fn github_events(config: Config) {
-    println!("pull requests for {:?} ->", config.repo);
     let raw_events = _github_events(config.repo.clone(), config.token);
     let events_per_author: HashMap<String, Vec<RawEvent>> = events_per_author(raw_events.unwrap());
     println!("{}", printable(config.repo, events_per_author));
