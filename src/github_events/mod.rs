@@ -118,7 +118,9 @@ pub enum Type {
 
 mod tests {
 
-    use github_events::*;
+    #[allow(unused_imports)] // Seems an open issue: https://github.com/rust-lang/rust/issues/43970
+    use super::*;
+    #[allow(unused_imports)] // Seems an open issue: https://github.com/rust-lang/rust/issues/43970
     use chrono::{TimeZone, Utc};
 
     #[test]
