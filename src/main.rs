@@ -14,8 +14,8 @@ fn main() {
         process::exit(1);
     });
     info!(
-        "Computing stats for GitHub repo '{}' (with token: {})",
-        config.repo,
+        "Computing stats for GitHub repos '{:?}' (with token: {})",
+        config.repos,
         config.token.is_some()
     );
     pullpito::github_events(config);
