@@ -7,7 +7,7 @@ Implemented while learning [Rust](https://www.rust-lang.org/) 🦀, reading [The
 
 ## Run
 
-In order to display pull request events for a public GitHub repository, run `cargo run $org/$repo`.
+In order to display pull request events for a *single public GitHub repository*, run `cargo run $org/$repo`.
 
 For instance, running `cargo run --quiet python/peps` will display:
 ```
@@ -26,14 +26,17 @@ pull requests for "python/peps" ->
     Rosuav: 3
 ```
 
-For a private GitHub repository, run `cargo run $org/$repo $token`.
+For a *private GitHub repository*, run `cargo run $org/$repo $token`.
 
-### Run with debug
+For *several GitHub repositories*, use a comma-separated list:  `cargo $repo1,$repo2 $org/$repo $token`
+
+### Run with debug logs
 
 ```sh
 RUST_LOG=pullpito=debug cargo run nicokosi/pullpito
 ```
 
+
 ## Install
 
-Run `cargo install ~/.cargo/bin/pullpito`.
+Run `cargo install ~/.cargo/bin/pullpito`. You can then run the `pullpito` command directly.

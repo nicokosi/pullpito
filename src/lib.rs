@@ -1,40 +1,79 @@
 extern crate chrono;
+extern crate env_logger;
 extern crate futures;
 
 #[macro_use]
 extern crate serde_derive;
 
+#[macro_use]
+extern crate log;
+
 pub mod github_events;
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Config {
-    pub repo: String,
+    pub repos: Vec<String>,
     pub token: Option<String>,
 }
 
 impl Config {
     pub fn new(args: &[String]) -> Result<Config, &'static str> {
         if args.len() < 2 {
-            return Err("Not enough arguments, expecting at least 1 argument");
+            return Err(
+                "Missing arguments.\n\n \
+                 Usage: pullpito $repositories $token\n\n \
+                 \t$repositories: a comma-separated list of GitHub repositories. Examples:\n \
+                 \t\tpython/peps\n \
+                 \t\tpython/peps,rust-lang/rust\n\n \
+                 \t$token: an optional GitHub personal access token",
+            );
         }
-        let repo = args[1].clone();
+        let repos = args[1].clone();
         let token = if args.len() == 3 {
             Some(args[2].clone())
         } else {
             None
         };
-        Ok(Config { repo, token })
+        let repos = repos.split(",").map(|s| s.to_string()).collect();
+        Ok(Config { repos, token })
     }
 }
 
 use std::str;
 use std::collections::HashMap;
+use std::thread;
+use std::sync::mpsc;
 use github_events::{github_events as _github_events, Action, RawEvent, Type};
 
 pub fn github_events(config: Config) {
     let raw_events = _github_events(&config.repo, config.token);
-    let events_per_author: HashMap<String, Vec<RawEvent>> = events_per_author(raw_events.unwrap());
-    println!("{}", printable(&config.repo, &events_per_author));
+    let (tx, rx) = mpsc::channel();
+
+    thread::spawn(move || {
+        for repo in config.repos {
+            debug!("Query stats for GitHub repo {:?}", repo);
+            let raw_events = _github_events(repo.clone(), config.token.clone());
+            let events_per_author: HashMap<String, Vec<RawEvent>> =
+                events_per_author(raw_events.unwrap());
+            tx.send(RepoEvents {
+                repo: repo,
+                events_per_author: events_per_author,
+            }).unwrap();
+        }
+    });
+
+    for repo_events in rx {
+        debug!("Print stats for GitHub repo {:?}", repo_events.repo);
+        println!(
+            "{}",
+            printable(&repo_events.repo, &repo_events.events_per_author)
+        );
+    }
+}
+
+struct RepoEvents {
+    repo: String,
+    events_per_author: HashMap<String, Vec<RawEvent>>,
 }
 
 fn events_per_author(events: Vec<RawEvent>) -> HashMap<String, Vec<RawEvent>> {
@@ -98,10 +137,9 @@ mod test {
 
     #[test]
     fn parse_config_with_no_params() {
-        assert_eq!(
-            Config::new(&vec!["".to_string()]),
-            Err("Not enough arguments, expecting at least 1 argument")
-        );
+        let config = Config::new(&vec!["".to_string()]);
+        assert!(config.is_err());
+        assert!(config.unwrap_err().contains("Missing arguments."));
     }
 
     #[test]
@@ -109,14 +147,14 @@ mod test {
         assert_eq!(
             Config::new(&vec!["".to_string(), "fakeRepo".to_string()]),
             Ok(Config {
-                repo: "fakeRepo".to_string(),
+                repos: vec!["fakeRepo".to_string()],
                 token: None,
             })
         );
     }
 
     #[test]
-    fn parse_config_with_repo_and_token_params() {
+    fn parse_config_with_one_repo_and_token_params() {
         assert_eq!(
             Config::new(&vec![
                 "".to_string(),
@@ -124,7 +162,22 @@ mod test {
                 "fakeToken".to_string(),
             ]),
             Ok(Config {
-                repo: "fakeRepo".to_string(),
+                repos: vec!["fakeRepo".to_string()],
+                token: Some("fakeToken".to_string()),
+            })
+        );
+    }
+
+    #[test]
+    fn parse_config_with_two_repos_and_token_params() {
+        assert_eq!(
+            Config::new(&vec![
+                "".to_string(),
+                "fakeRepo1,fakeRepo2".to_string(),
+                "fakeToken".to_string(),
+            ]),
+            Ok(Config {
+                repos: vec!["fakeRepo1".to_string(), "fakeRepo2".to_string()],
                 token: Some("fakeToken".to_string()),
             })
         );
@@ -154,8 +207,10 @@ mod test {
             ],
         );
 
-        let printable = printable("foo", &events);
+        let printable = printable("my-org/my-repo", events);
 
+        assert!(printable.contains("pull requests for \"my-org/my-repo\" ->"));
+        assert!(printable.contains("opened per author:\n    alice: 1\n"));
         assert!(printable.contains("opened per author:\n    alice: 1\n"));
         assert!(printable.contains("commented per author:\n  closed per author:\n"));
     }
