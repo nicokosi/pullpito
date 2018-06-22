@@ -46,23 +46,24 @@ use std::sync::mpsc;
 use github_events::{github_events as _github_events, Action, RawEvent, Type};
 
 pub fn github_events(config: Config) {
-    let raw_events = _github_events(&config.repo, config.token);
-    let (tx, rx) = mpsc::channel();
+    let (sender, receiver) = mpsc::channel();
+    for repo in config.repos {
+        debug!("Query stats for GitHub repo {:?}", repo);
+        let sender = mpsc::Sender::clone(&sender);
+        let token = config.token.clone();
+        thread::spawn(move || {
+            sender
+                .send(RepoEvents {
+                    repo: repo.clone(),
+                    events_per_author: events_per_author(
+                        _github_events(repo.clone(), token.clone()).unwrap(),
+                    ),
+                })
+                .unwrap();
+        });
+    }
 
-    thread::spawn(move || {
-        for repo in config.repos {
-            debug!("Query stats for GitHub repo {:?}", repo);
-            let raw_events = _github_events(repo.clone(), config.token.clone());
-            let events_per_author: HashMap<String, Vec<RawEvent>> =
-                events_per_author(raw_events.unwrap());
-            tx.send(RepoEvents {
-                repo: repo,
-                events_per_author: events_per_author,
-            }).unwrap();
-        }
-    });
-
-    for repo_events in rx {
+    for repo_events in receiver {
         debug!("Print stats for GitHub repo {:?}", repo_events.repo);
         println!(
             "{}",
