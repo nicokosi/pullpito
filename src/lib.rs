@@ -47,6 +47,8 @@ use github_events::{github_events as _github_events, Action, RawEvent, Type};
 
 pub fn github_events(config: Config) {
     let (sender, receiver) = mpsc::channel();
+    let number_of_repos = config.repos.len();
+
     for repo in config.repos {
         debug!("Query stats for GitHub repo {:?}", repo);
         let sender = mpsc::Sender::clone(&sender);
@@ -63,7 +65,8 @@ pub fn github_events(config: Config) {
         });
     }
 
-    for repo_events in receiver {
+    for _ in 0..number_of_repos {
+        let repo_events = receiver.recv().unwrap();
         debug!("Print stats for GitHub repo {:?}", repo_events.repo);
         println!(
             "{}",
