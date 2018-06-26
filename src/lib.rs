@@ -58,7 +58,7 @@ pub fn github_events(config: Config) {
                 .send(RepoEvents {
                     repo: repo.clone(),
                     events_per_author: events_per_author(
-                        _github_events(repo.clone(), token.clone()).unwrap(),
+                        _github_events(&repo, token.clone()).unwrap(),
                     ),
                 })
                 .unwrap();
@@ -211,7 +211,7 @@ mod test {
             ],
         );
 
-        let printable = printable("my-org/my-repo", events);
+        let printable = printable("my-org/my-repo", &events);
 
         assert!(printable.contains("pull requests for \"my-org/my-repo\" ->"));
         assert!(printable.contains("opened per author:\n    alice: 1\n"));
