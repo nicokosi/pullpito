@@ -32,13 +32,13 @@ use std::collections::HashMap;
 use github_events::{github_events as _github_events, Action, RawEvent, Type};
 
 pub fn github_events(config: Config) {
-    let raw_events = _github_events(config.repo.clone(), config.token);
+    let raw_events = _github_events(&config.repo, config.token);
     let events_per_author: HashMap<String, Vec<RawEvent>> = events_per_author(raw_events.unwrap());
-    println!("{}", printable(config.repo, events_per_author));
+    println!("{}", printable(&config.repo, &events_per_author));
 }
 
 fn events_per_author(events: Vec<RawEvent>) -> HashMap<String, Vec<RawEvent>> {
-    return events
+    events
         .into_iter()
         .filter(|e| {
             e.event_type == Type::PullRequestEvent
@@ -46,12 +46,12 @@ fn events_per_author(events: Vec<RawEvent>) -> HashMap<String, Vec<RawEvent>> {
                 || e.event_type == Type::IssueCommentEvent
         })
         .fold(HashMap::new(), |mut acc, event: RawEvent| {
-            (*acc.entry(event.actor.login.clone()).or_insert(Vec::new())).push(event);
+            (*acc.entry(event.actor.login.clone()).or_insert_with(Vec::new)).push(event);
             acc
-        });
+        })
 }
 
-fn printable(repo: String, events_per_author: HashMap<String, Vec<RawEvent>>) -> String {
+fn printable(repo: &str, events_per_author: &HashMap<String, Vec<RawEvent>>) -> String {
     let mut out: String = format!("pull requests for {:?} ->\n", repo);
     out.push_str("  opened per author:\n");
     for (author, events) in events_per_author.iter() {
@@ -89,7 +89,7 @@ fn printable(repo: String, events_per_author: HashMap<String, Vec<RawEvent>>) ->
             out.push_str(&format!("    {}: {}\n", author, closed_pull_requests));
         }
     }
-    return out.to_string();
+    out.to_string()
 }
 
 #[cfg(test)]
@@ -154,7 +154,7 @@ mod test {
             ],
         );
 
-        let printable = printable("foo".to_string(), events);
+        let printable = printable("foo", &events);
 
         assert!(printable.contains("opened per author:\n    alice: 1\n"));
         assert!(printable.contains("commented per author:\n  closed per author:\n"));
