@@ -60,18 +60,6 @@ pub fn github_events(repo: &str, token: Option<String>) -> Result<Vec<RawEvent>,
             },
         };
 
-        // Stop iterating on event pages if current page is the last one
-        let link_header =
-            str::from_utf8(resp.headers().get_raw("Link").unwrap().one().unwrap()).unwrap();
-        let last_page = last_page_from_link_header(link_header);
-        trace!("Last page: {:?} (current page: {})", last_page, page);
-        match last_page {
-            Some(last_page) => if page == last_page {
-                break;
-            },
-            None => break,
-        }
-
         let raw_events_per_page = raw_github_events(&body);
         match raw_events_per_page {
             Ok(mut events) => raw_events.append(&mut events),
@@ -82,6 +70,23 @@ pub fn github_events(repo: &str, token: Option<String>) -> Result<Vec<RawEvent>,
                 ))
             }
         };
+
+        // Stop iterating on event pages if current page is the last one
+        let link_header = resp.headers().get_raw("Link");
+        match link_header {
+            Some(link_header) => {
+                let link_header = str::from_utf8(link_header.one().unwrap()).unwrap();
+                let last_page = last_page_from_link_header(link_header);
+                debug!("Last page: {:?} (current page: {})", last_page, page);
+                match last_page {
+                    Some(last_page) => if page == last_page {
+                        break;
+                    },
+                    None => break,
+                }
+            }
+            None => break,
+        }
     }
     Ok(raw_events)
 }
