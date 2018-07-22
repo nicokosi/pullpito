@@ -6,6 +6,7 @@ use std::str;
 use chrono::{DateTime, Utc};
 use std::io::{Error, ErrorKind};
 use regex::Regex;
+use self::reqwest::StatusCode;
 
 pub fn github_events(repo: &str, token: Option<String>) -> Result<Vec<RawEvent>, Error> {
     let mut raw_events: Vec<RawEvent> = Vec::new();
@@ -20,8 +21,13 @@ pub fn github_events(repo: &str, token: Option<String>) -> Result<Vec<RawEvent>,
         let resp = reqwest::get(url.as_str());
         let mut resp = match resp {
             Ok(resp) => resp,
-            Err(_) => return Err(Error::new(ErrorKind::Other, "Cannot connect to GitHub API")),
+            Err(error) => return Err(Error::new(ErrorKind::Other, format!("Cannot connect to GitHub API: {}", error)))
         };
+        if resp.status() != StatusCode::Ok {
+            return Err(Error::new(
+                ErrorKind::Other,
+                format!("GitHub API error: {:?}", resp.status())));
+        }
         let body = resp.text();
         let body = match body {
             Ok(body) => {
@@ -48,8 +54,8 @@ pub fn github_events(repo: &str, token: Option<String>) -> Result<Vec<RawEvent>,
                     debug!("Oops, something went wrong with GitHub API {:?}", error);
                     return Err(Error::new(
                         ErrorKind::Other,
-                        "Cannot get GitHub API content",
-                    ));
+                        format!("Cannot get GitHub API content: {}", error),
+                    ))
                 }
             },
         };
@@ -69,10 +75,10 @@ pub fn github_events(repo: &str, token: Option<String>) -> Result<Vec<RawEvent>,
         let raw_events_per_page = raw_github_events(&body);
         match raw_events_per_page {
             Ok(mut events) => raw_events.append(&mut events),
-            Err(_) => {
+            Err(error) => {
                 return Err(Error::new(
                     ErrorKind::Other,
-                    "Cannot deserialize GitHub API content",
+                    format!("Cannot deserialize GitHub API content: {}", error),
                 ))
             }
         };
