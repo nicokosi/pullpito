@@ -37,7 +37,7 @@ impl Config {
         } else {
             None
         };
-        let repos = repos.split(",").map(|s| s.to_string()).collect();
+        let repos = repos.split(',').map(|s| s.to_string()).collect();
         Ok(Config { repos, token })
     }
 }
@@ -61,7 +61,7 @@ pub fn github_events(config: Config) {
                 .send(RepoEvents {
                     repo: repo.clone(),
                     events_per_author: events_per_author(
-                        _github_events(&repo, token.clone()).unwrap(),
+                        _github_events(&repo, &token).unwrap(),
                     ),
                 })
                 .unwrap();
