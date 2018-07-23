@@ -2,11 +2,11 @@ extern crate regex;
 extern crate reqwest;
 extern crate serde_json;
 
-use std::str;
-use chrono::{DateTime, Utc};
-use std::io::{Error, ErrorKind};
-use regex::Regex;
 use self::reqwest::StatusCode;
+use chrono::{DateTime, Utc};
+use regex::Regex;
+use std::io::{Error, ErrorKind};
+use std::str;
 
 pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>, Error> {
     let mut raw_events: Vec<RawEvent> = Vec::new();
@@ -21,12 +21,18 @@ pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>
         let resp = reqwest::get(url.as_str());
         let mut resp = match resp {
             Ok(resp) => resp,
-            Err(error) => return Err(Error::new(ErrorKind::Other, format!("Cannot connect to GitHub API: {}", error)))
+            Err(error) => {
+                return Err(Error::new(
+                    ErrorKind::Other,
+                    format!("Cannot connect to GitHub API: {}", error),
+                ))
+            }
         };
         if resp.status() != StatusCode::Ok {
             return Err(Error::new(
                 ErrorKind::Other,
-                format!("GitHub API error: {:?}", resp.status())));
+                format!("GitHub API error: {:?}", resp.status()),
+            ));
         }
         let body = resp.text();
         let body = match body {
@@ -55,7 +61,7 @@ pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>
                     return Err(Error::new(
                         ErrorKind::Other,
                         format!("Cannot get GitHub API content: {}", error),
-                    ))
+                    ));
                 }
             },
         };
@@ -178,9 +184,11 @@ pub enum Type {
 
 mod tests {
 
-    #[allow(unused_imports)] // Seems an open issue: https://github.com/rust-lang/rust/issues/43970
+    #[allow(unused_imports)]
+    // Seems an open issue: https://github.com/rust-lang/rust/issues/43970
     use super::*;
-    #[allow(unused_imports)] // Seems an open issue: https://github.com/rust-lang/rust/issues/43970
+    #[allow(unused_imports)]
+    // Seems an open issue: https://github.com/rust-lang/rust/issues/43970
     use chrono::{TimeZone, Utc};
 
     #[test]

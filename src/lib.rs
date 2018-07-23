@@ -42,11 +42,11 @@ impl Config {
     }
 }
 
-use std::str;
-use std::collections::HashMap;
-use std::thread;
-use std::sync::mpsc;
 use github_events::{github_events as _github_events, Action, RawEvent, Type};
+use std::collections::HashMap;
+use std::str;
+use std::sync::mpsc;
+use std::thread;
 
 pub fn github_events(config: Config) {
     let (sender, receiver) = mpsc::channel();
@@ -60,9 +60,7 @@ pub fn github_events(config: Config) {
             sender
                 .send(RepoEvents {
                     repo: repo.clone(),
-                    events_per_author: events_per_author(
-                        _github_events(&repo, &token).unwrap(),
-                    ),
+                    events_per_author: events_per_author(_github_events(&repo, &token).unwrap()),
                 })
                 .unwrap();
         });
@@ -192,28 +190,26 @@ mod test {
         );
     }
 
-    use std::collections::HashMap;
-    use printable;
-    use github_events::{Action, Actor, Payload, RawEvent, Type};
     use chrono::{TimeZone, Utc};
+    use github_events::{Action, Actor, Payload, RawEvent, Type};
+    use printable;
+    use std::collections::HashMap;
 
     #[test]
     fn printable_with_opened_pull_request() {
         let mut events: HashMap<String, Vec<RawEvent>> = HashMap::new();
         events.insert(
             "alice".to_string(),
-            vec![
-                RawEvent {
-                    actor: Actor {
-                        login: "alice".to_string(),
-                    },
-                    payload: Payload {
-                        action: Some(Action::opened),
-                    },
-                    event_type: Type::PullRequestEvent,
-                    created_at: Utc.ymd(2016, 12, 1).and_hms(16, 26, 43),
+            vec![RawEvent {
+                actor: Actor {
+                    login: "alice".to_string(),
                 },
-            ],
+                payload: Payload {
+                    action: Some(Action::opened),
+                },
+                event_type: Type::PullRequestEvent,
+                created_at: Utc.ymd(2016, 12, 1).and_hms(16, 26, 43),
+            }],
         );
 
         let printable = printable("my-org/my-repo", &events);
@@ -228,18 +224,16 @@ mod test {
 
     #[test]
     fn compute_events_per_author() {
-        let events_per_author = events_per_author(vec![
-            RawEvent {
-                actor: Actor {
-                    login: "alice".to_string(),
-                },
-                payload: Payload {
-                    action: Some(Action::opened),
-                },
-                event_type: Type::PullRequestEvent,
-                created_at: Utc.ymd(2016, 12, 1).and_hms(16, 26, 43),
+        let events_per_author = events_per_author(vec![RawEvent {
+            actor: Actor {
+                login: "alice".to_string(),
             },
-        ]);
+            payload: Payload {
+                action: Some(Action::opened),
+            },
+            event_type: Type::PullRequestEvent,
+            created_at: Utc.ymd(2016, 12, 1).and_hms(16, 26, 43),
+        }]);
         assert_eq!(events_per_author.get("alice").into_iter().len(), 1);
     }
 
