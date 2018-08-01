@@ -1,17 +1,25 @@
 extern crate chrono;
 extern crate env_logger;
 extern crate futures;
-
-#[macro_use]
-extern crate serde_derive;
-
-#[macro_use]
-extern crate log;
-
-pub mod github_events;
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate log;
 extern crate regex;
+#[macro_use]
+extern crate serde_derive;
+#[macro_use]
+extern crate structopt;
+
+use github_events::{github_events as _github_events, Action, RawEvent, Type};
+use std::collections::HashMap;
+use std::ffi::OsString;
+use std::str;
+use std::sync::mpsc;
+use std::thread;
+use structopt::StructOpt;
+
+pub mod github_events;
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Config {
@@ -19,34 +27,38 @@ pub struct Config {
     pub token: Option<String>,
 }
 
-impl Config {
-    pub fn new(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 2 {
-            return Err(
-                "Missing arguments.\n\n \
-                 Usage: pullpito $repositories $token\n\n \
-                 \t$repositories: a comma-separated list of GitHub repositories. Examples:\n \
-                 \t\tpython/peps\n \
-                 \t\tpython/peps,rust-lang/rust\n\n \
-                 \t$token: an optional GitHub personal access token",
-            );
-        }
-        let repos = args[1].clone();
-        let token = if args.len() == 3 {
-            Some(args[2].clone())
-        } else {
-            None
-        };
-        let repos = repos.split(',').map(|s| s.to_string()).collect();
-        Ok(Config { repos, token })
-    }
+#[derive(StructOpt, Debug)]
+#[structopt(
+    about = "Display simple counters for GitHub Pull Requests",
+    author = "Nicolas Kosinski <nicokosi@yahoo.com>",
+    name = "Pullpito 🐙",
+    version = "0.1.0"
+)]
+struct Options {
+    #[structopt(
+        long = "repository",
+        help = "the name of a GitHub repository, i.e. 'python/peps'",
+        raw(required = "true"),
+        raw(takes_value = "true"),
+        short = "r"
+    )]
+    repositories: Vec<String>,
+
+    #[structopt(
+        help = "an optional GitHub personal access token (required for private GitHub repositories)",
+        long = "token",
+        short = "t"
+    )]
+    token: Option<String>,
 }
 
-use github_events::{github_events as _github_events, Action, RawEvent, Type};
-use std::collections::HashMap;
-use std::str;
-use std::sync::mpsc;
-use std::thread;
+pub fn config_from_args(args: Vec<OsString>) -> Config {
+    let options = Options::from_iter(args);
+    Config {
+        repos: options.repositories,
+        token: options.token,
+    }
+}
 
 pub fn github_events(config: Config) {
     let (sender, receiver) = mpsc::channel();
@@ -140,60 +152,84 @@ fn printable(repo: &str, events_per_author: &HashMap<String, Vec<RawEvent>>) -> 
 
 #[cfg(test)]
 mod test {
-    use Config;
-
-    #[test]
-    fn parse_config_with_no_params() {
-        let config = Config::new(&vec!["".to_string()]);
-        assert!(config.is_err());
-        assert!(config.unwrap_err().contains("Missing arguments."));
-    }
-
-    #[test]
-    fn parse_config_with_repo_param() {
-        assert_eq!(
-            Config::new(&vec!["".to_string(), "fakeRepo".to_string()]),
-            Ok(Config {
-                repos: vec!["fakeRepo".to_string()],
-                token: None,
-            })
-        );
-    }
-
-    #[test]
-    fn parse_config_with_one_repo_and_token_params() {
-        assert_eq!(
-            Config::new(&vec![
-                "".to_string(),
-                "fakeRepo".to_string(),
-                "fakeToken".to_string(),
-            ]),
-            Ok(Config {
-                repos: vec!["fakeRepo".to_string()],
-                token: Some("fakeToken".to_string()),
-            })
-        );
-    }
-
-    #[test]
-    fn parse_config_with_two_repos_and_token_params() {
-        assert_eq!(
-            Config::new(&vec![
-                "".to_string(),
-                "fakeRepo1,fakeRepo2".to_string(),
-                "fakeToken".to_string(),
-            ]),
-            Ok(Config {
-                repos: vec!["fakeRepo1".to_string(), "fakeRepo2".to_string()],
-                token: Some("fakeToken".to_string()),
-            })
-        );
-    }
-
     use chrono::{TimeZone, Utc};
+    use config_from_args;
+    use events_per_author;
     use github_events::{Action, Actor, Payload, RawEvent, Type};
     use printable;
     use std::collections::HashMap;
+    use Config;
+    use OsString;
+
+    #[test]
+    fn parse_args_with_a_long_repo_param() {
+        assert_eq!(
+            config_from_args(vec![
+                OsString::from("pullpito"),
+                OsString::from("--repository"),
+                OsString::from("fakeRepo"),
+            ]),
+            Config {
+                repos: vec!["fakeRepo".to_string()],
+                token: None,
+            },
+        );
+    }
+
+    #[test]
+    fn parse_args_with_a_long_repo_param_and_a_long_token_param() {
+        assert_eq!(
+            config_from_args(vec![
+                OsString::from("pullpito"),
+                OsString::from("--repository"),
+                OsString::from("fakeRepo"),
+                OsString::from("--token"),
+                OsString::from("fakeToken"),
+            ]),
+            Config {
+                repos: vec!["fakeRepo".to_string()],
+                token: Some("fakeToken".to_string()),
+            }
+        );
+    }
+
+    #[test]
+    fn parse_args_with_two_long_repo_params_and_a_long_token_param() {
+        assert_eq!(
+            config_from_args(vec![
+                OsString::from("pullpito"),
+                OsString::from("--repository"),
+                OsString::from("fakeRepo1"),
+                OsString::from("--repository"),
+                OsString::from("fakeRepo2"),
+                OsString::from("--token"),
+                OsString::from("fakeToken"),
+            ]),
+            Config {
+                repos: vec!["fakeRepo1".to_string(), "fakeRepo2".to_string()],
+                token: Some("fakeToken".to_string()),
+            }
+        );
+    }
+
+    #[test]
+    fn parse_args_with_two_short_repo_params_and_a_short_token_param() {
+        assert_eq!(
+            config_from_args(vec![
+                OsString::from("pullpito"),
+                OsString::from("-r"),
+                OsString::from("fakeRepo1"),
+                OsString::from("-r"),
+                OsString::from("fakeRepo2"),
+                OsString::from("-t"),
+                OsString::from("fakeToken"),
+            ]),
+            Config {
+                repos: vec!["fakeRepo1".to_string(), "fakeRepo2".to_string()],
+                token: Some("fakeToken".to_string()),
+            }
+        );
+    }
 
     #[test]
     fn printable_with_opened_pull_request() {
@@ -219,8 +255,6 @@ mod test {
         assert!(printable.contains("opened per author:\n    alice: 1\n"));
         assert!(printable.contains("commented per author:\n  closed per author:\n"));
     }
-
-    use events_per_author;
 
     #[test]
     fn compute_events_per_author() {
