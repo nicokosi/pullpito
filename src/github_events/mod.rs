@@ -5,6 +5,7 @@ extern crate serde_json;
 use self::reqwest::StatusCode;
 use chrono::{DateTime, Utc};
 use regex::Regex;
+use serde::{Deserialize, Deserializer};
 use std::io::{Error, ErrorKind};
 use std::str;
 
@@ -112,7 +113,9 @@ fn last_page_from_link_header(link_header: &str) -> Option<u32> {
 pub struct RawEvent {
     pub actor: Actor,
     pub payload: Payload,
-    #[serde(rename = "type")]
+    #[serde(
+        rename = "type", deserialize_with = "deserialize_field_type", default = "Type::default"
+    )]
     pub event_type: Type,
     pub created_at: DateTime<Utc>,
 }
@@ -124,7 +127,8 @@ pub struct Actor {
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
 pub struct Payload {
-    pub action: Option<Action>,
+    #[serde(deserialize_with = "deserialize_field_action", default = "Action::default")]
+    pub action: Action,
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
@@ -134,52 +138,42 @@ pub enum Action {
     #[allow(non_camel_case_types)]
     closed,
     #[allow(non_camel_case_types)]
-    edited,
-    #[allow(non_camel_case_types)]
     opened,
-    #[allow(non_camel_case_types)]
-    started,
+    #[serde(skip_deserializing)]
+    Unknown,
+}
+impl Action {
+    fn default() -> Self {
+        Action::Unknown
+    }
+}
+
+fn deserialize_field_action<'de, D>(deserializer: D) -> Result<Action, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Ok(Action::deserialize(deserializer).unwrap_or(Action::Unknown))
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
 pub enum Type {
-    CommitCommentEvent,
-    CreateEvent,
-    DeleteEvent,
-    DeploymentEvent,
-    DeploymentStatusEvent,
-    DownloadEvent,
-    FollowEvent,
-    ForkEvent,
-    ForkApplyEvent,
-    GistEvent,
-    GollumEvent,
-    InstallationEvent,
-    InstallationRepositoriesEvent,
     IssueCommentEvent,
-    IssuesEvent,
-    LabelEvent,
-    MarketplacePurchaseEvent,
-    MemberEvent,
-    MembershipEvent,
-    MilestoneEvent,
-    OrganizationEvent,
-    OrgBlockEvent,
-    PageBuildEvent,
-    ProjectCardEvent,
-    ProjectColumnEvent,
-    ProjectEvent,
-    PublicEvent,
     PullRequestEvent,
-    PullRequestReviewEvent,
     PullRequestReviewCommentEvent,
-    PushEvent,
-    ReleaseEvent,
-    RepositoryEvent,
-    StatusEvent,
-    TeamEvent,
-    TeamAddEvent,
-    WatchEvent,
+    #[serde(skip_deserializing)]
+    Unknown,
+}
+impl Type {
+    fn default() -> Self {
+        Type::Unknown
+    }
+}
+
+fn deserialize_field_type<'de, D>(deserializer: D) -> Result<Type, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Ok(Type::deserialize(deserializer).unwrap_or(Type::Unknown))
 }
 
 mod tests {
@@ -200,9 +194,28 @@ mod tests {
                     login: "alice".to_string(),
                 },
                 payload: Payload {
-                    action: Some(Action::opened),
+                    action: Action::opened,
                 },
                 event_type: Type::PullRequestEvent,
+                created_at: Utc.ymd(2016, 12, 1).and_hms(16, 26, 43),
+            }
+        );
+    }
+
+    #[test]
+    fn parse_github_event_with_unknown_enums() {
+        assert_eq!(
+            raw_github_events(include_str!(
+                "../../test/github_event_with_unknown_enums.json"
+            )).unwrap()[0],
+            RawEvent {
+                actor: Actor {
+                    login: "alice".to_string(),
+                },
+                payload: Payload {
+                    action: Action::Unknown,
+                },
+                event_type: Type::Unknown,
                 created_at: Utc.ymd(2016, 12, 1).and_hms(16, 26, 43),
             }
         );
