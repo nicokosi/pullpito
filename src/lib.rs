@@ -20,6 +20,7 @@ use std::thread;
 use structopt::StructOpt;
 
 pub mod github_events;
+extern crate serde;
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Config {
@@ -102,7 +103,8 @@ fn events_per_author(events: Vec<RawEvent>) -> HashMap<String, Vec<RawEvent>> {
                 || e.event_type == Type::IssueCommentEvent
         })
         .fold(HashMap::new(), |mut acc, event: RawEvent| {
-            (*acc.entry(event.actor.login.clone())
+            (*acc
+                .entry(event.actor.login.clone())
                 .or_insert_with(Vec::new))
                 .push(event);
             acc
@@ -116,7 +118,7 @@ fn printable(repo: &str, events_per_author: &HashMap<String, Vec<RawEvent>>) -> 
         let opened_pull_requests = events
             .into_iter()
             .filter(|e| {
-                e.event_type == Type::PullRequestEvent && e.payload.action == Some(Action::opened)
+                e.event_type == Type::PullRequestEvent && e.payload.action == Action::opened
             })
             .count();
         if opened_pull_requests > 0 {
@@ -128,7 +130,7 @@ fn printable(repo: &str, events_per_author: &HashMap<String, Vec<RawEvent>>) -> 
         let commented_pull_requests = events
             .into_iter()
             .filter(|e| {
-                e.event_type == Type::IssueCommentEvent && e.payload.action == Some(Action::created)
+                e.event_type == Type::IssueCommentEvent && e.payload.action == Action::created
             })
             .count();
         if commented_pull_requests > 0 {
@@ -140,7 +142,7 @@ fn printable(repo: &str, events_per_author: &HashMap<String, Vec<RawEvent>>) -> 
         let closed_pull_requests = events
             .into_iter()
             .filter(|e| {
-                e.event_type == Type::PullRequestEvent && e.payload.action == Some(Action::closed)
+                e.event_type == Type::PullRequestEvent && e.payload.action == Action::closed
             })
             .count();
         if closed_pull_requests > 0 {
@@ -241,7 +243,7 @@ mod test {
                     login: "alice".to_string(),
                 },
                 payload: Payload {
-                    action: Some(Action::opened),
+                    action: Action::opened,
                 },
                 event_type: Type::PullRequestEvent,
                 created_at: Utc.ymd(2016, 12, 1).and_hms(16, 26, 43),
@@ -263,7 +265,7 @@ mod test {
                 login: "alice".to_string(),
             },
             payload: Payload {
-                action: Some(Action::opened),
+                action: Action::opened,
             },
             event_type: Type::PullRequestEvent,
             created_at: Utc.ymd(2016, 12, 1).and_hms(16, 26, 43),
