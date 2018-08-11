@@ -1,0 +1,13 @@
+query PullRequestCountersPerAuthor($owner: String!, $repository: String!, $since: DateTime!) {
+  repository(owner: $owner, name: $repository) {
+    pullRequests(last: 10) {
+      edges {
+        node {
+          timeline(last: 10, since: $since) {
+            totalCount
+          }
+        }
+      }
+    }
+  }
+}

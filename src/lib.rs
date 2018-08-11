@@ -10,6 +10,9 @@ extern crate regex;
 extern crate serde_derive;
 #[macro_use]
 extern crate structopt;
+extern crate serde;
+#[macro_use]
+extern crate graphql_client;
 
 use github_events::{github_events as _github_events, Action, RawEvent, Type};
 use std::collections::HashMap;
@@ -20,7 +23,6 @@ use std::thread;
 use structopt::StructOpt;
 
 pub mod github_events;
-extern crate serde;
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Config {
@@ -60,6 +62,10 @@ pub fn config_from_args(args: Vec<OsString>) -> Config {
         token: options.token,
     }
 }
+
+#[derive(GraphQLQuery)]
+#[graphql(schema_path = "src/schema.graphql", query_path = "src/pull-request-timeline.graphql")]
+pub struct MyQuery;
 
 pub fn github_events(config: Config) {
     let (sender, receiver) = mpsc::channel();
