@@ -22,9 +22,9 @@ pull requests for "python/peps" ->
     gvanrossum: 6
 ```
 
-For a **private** GitHub repository, run `cargo run --repository $org/$repo --token $token`.
+For a **private** GitHub repository, run `cargo run -- --repository $org/$repo --token $token`.
 
-For **several** GitHub repositories, use several `repository` arguments: `cargo run --repository $repo1 --repository $repo2`.
+For **several** GitHub repositories, use several `repository` arguments: `cargo run -- --repository $repo1 --repository $repo2`.
 
 For more information, run `cargo run -- --help`.
 
@@ -32,7 +32,7 @@ For more information, run `cargo run -- --help`.
 ### Run with debug logs
 
 ```sh
-RUST_LOG=pullpito=debug cargo run --repository nicokosi/pullpito
+RUST_LOG=pullpito=debug cargo run -- --repository nicokosi/pullpito
 ```
 
 
