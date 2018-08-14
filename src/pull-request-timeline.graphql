@@ -1,10 +1,42 @@
-query PullRequestCountersPerAuthor($owner: String!, $repository: String!, $since: DateTime!) {
+query MergedPullRequests($owner: String!, $repository: String!, $since: DateTime!) {
   repository(owner: $owner, name: $repository) {
-    pullRequests(last: 10) {
+    pullRequests(last: 30) {
       edges {
         node {
+          title
+          createdAt
+          createdBy: author {
+            __typename
+            login
+          }
           timeline(last: 10, since: $since) {
-            totalCount
+            edges {
+              node {
+                __typename
+                ... on MergedEvent {
+                  mergedAt: createdAt
+                  mergedBy: actor {
+                    __typename
+                    login
+                  }
+                }
+                ... on ClosedEvent {
+                  closedAt: createdAt
+                  closedBy: actor {
+                    __typename
+                    login
+                  }
+                }
+                ... on IssueComment {
+                  commentedBy: author {
+                    __typename
+                    login
+                  }
+                  comment: bodyText
+                  publishedAt
+                }
+              }
+            }
           }
         }
       }
