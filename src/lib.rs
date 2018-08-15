@@ -13,6 +13,7 @@ extern crate structopt;
 extern crate serde;
 #[macro_use]
 extern crate graphql_client;
+extern crate reqwest;
 
 use github_events::{github_events as _github_events, Action, RawEvent, Type};
 use graphql_client::*;
@@ -66,7 +67,7 @@ pub fn config_from_args(args: Vec<OsString>) -> Config {
 
 #[derive(GraphQLQuery)]
 #[graphql(schema_path = "src/schema.graphql", query_path = "src/pull-request-timeline.graphql")]
-struct Query1;
+struct Timeline;
 
 use chrono::prelude::*;
 pub fn github_events(config: Config) {
@@ -87,26 +88,34 @@ pub fn github_events(config: Config) {
                 .unwrap();
         });
 
-        let repoWithOrg: Vec<&str> = repo2.split('/').collect();
-        let q = Query1::build_query(query1::Variables {
-            owner: repoWithOrg.get(0).unwrap().to_string(),
-            repository: repoWithOrg.get(1).unwrap().to_string(),
+        let repo_with_org: Vec<&str> = repo2.split('/').collect();
+        let query = Timeline::build_query(timeline::Variables {
+            owner: repo_with_org.get(0).unwrap().to_string(),
+            repository: repo_with_org.get(1).unwrap().to_string(),
             since: Utc::now().to_string(),
         });
 
-        //        let client = reqwest::Client::new();
-        //
-        //        let mut res = client
-        //            .post("https://api.github.com/graphql")
-        //            .header(reqwest::header::Authorization(format!(
-        //                "bearer {}",
-        //                config.github_api_token
-        //            ))).json(&q)
-        //            .send();
-        //
-        //        let response_body: GraphQLResponse<timeline::ResponseData> = res.json();
-        //        info!("{:?}", response_body);
-        //
+        let client = reqwest::Client::new();
+        let mut response = client
+            .post("https://api.github.com/graphql")
+            .header(reqwest::header::Authorization(format!(
+                "bearer {:?}",
+                config.token
+            )))
+            .json(&query)
+            .send();
+        let response = match response.unwrap().json() {
+            Ok(r) => {
+                println!("It worked!");
+                return r;
+            }
+            Err(_e) => {
+                println!("It failed!");
+            }
+        };
+        println!("graphql");
+        println!("{:?}", response);
+
         //        if let Some(errors) = response_body.errors {
         //            println!("there are errors:");
         //        }
