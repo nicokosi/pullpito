@@ -15,6 +15,7 @@ extern crate serde;
 extern crate graphql_client;
 
 use github_events::{github_events as _github_events, Action, RawEvent, Type};
+use graphql_client::*;
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::str;
@@ -65,16 +66,18 @@ pub fn config_from_args(args: Vec<OsString>) -> Config {
 
 #[derive(GraphQLQuery)]
 #[graphql(schema_path = "src/schema.graphql", query_path = "src/pull-request-timeline.graphql")]
-pub struct MyQuery;
+struct Query1;
 
+use chrono::prelude::*;
 pub fn github_events(config: Config) {
     let (sender, receiver) = mpsc::channel();
     let number_of_repos = config.repos.len();
 
     for repo in config.repos {
-        debug!("Query stats for GitHub repo {:?}", repo);
+        debug!("Query stats for GitHub repo {:?}", &repo);
         let sender = mpsc::Sender::clone(&sender);
         let token = config.token.clone();
+        let repo2 = repo.clone();
         thread::spawn(move || {
             sender
                 .send(RepoEvents {
@@ -83,8 +86,31 @@ pub fn github_events(config: Config) {
                 })
                 .unwrap();
         });
-    }
 
+        let repoWithOrg: Vec<&str> = repo2.split('/').collect();
+        let q = Query1::build_query(query1::Variables {
+            owner: repoWithOrg.get(0).unwrap().to_string(),
+            repository: repoWithOrg.get(1).unwrap().to_string(),
+            since: Utc::now().to_string(),
+        });
+
+        //        let client = reqwest::Client::new();
+        //
+        //        let mut res = client
+        //            .post("https://api.github.com/graphql")
+        //            .header(reqwest::header::Authorization(format!(
+        //                "bearer {}",
+        //                config.github_api_token
+        //            ))).json(&q)
+        //            .send();
+        //
+        //        let response_body: GraphQLResponse<timeline::ResponseData> = res.json();
+        //        info!("{:?}", response_body);
+        //
+        //        if let Some(errors) = response_body.errors {
+        //            println!("there are errors:");
+        //        }
+    }
     for _ in 0..number_of_repos {
         let repo_events = receiver.recv().unwrap();
         debug!("Print stats for GitHub repo {:?}", repo_events.repo);
@@ -278,5 +304,4 @@ mod test {
         }]);
         assert_eq!(events_per_author.get("alice").into_iter().len(), 1);
     }
-
 }
