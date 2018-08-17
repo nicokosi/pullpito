@@ -94,7 +94,6 @@ pub fn github_events(config: Config) {
             repository: repo_with_org.get(1).unwrap().to_string(),
             since: Utc::now().to_string(),
         });
-
         let client = reqwest::Client::new();
         let mut response = client
             .post("https://api.github.com/graphql")
@@ -104,13 +103,14 @@ pub fn github_events(config: Config) {
             )))
             .json(&query)
             .send();
+        println!("{:?}", response);
         let response = match response.unwrap().json() {
             Ok(r) => {
                 println!("It worked!");
                 return r;
             }
-            Err(_e) => {
-                println!("It failed!");
+            Err(e) => {
+                println!("It failed! {:?}", e);
             }
         };
         println!("graphql");
