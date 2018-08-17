@@ -95,11 +95,12 @@ pub fn github_events(config: Config) {
             since: Utc::now().to_string(),
         });
         let client = reqwest::Client::new();
+        let token = config.token.clone();
         let mut response = client
             .post("https://api.github.com/graphql")
             .header(reqwest::header::Authorization(format!(
-                "bearer {:?}",
-                config.token
+                "bearer {}",
+                token.unwrap()
             )))
             .json(&query)
             .send();
