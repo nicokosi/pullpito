@@ -70,6 +70,7 @@ pub fn config_from_args(args: Vec<OsString>) -> Config {
 struct Timeline;
 
 use chrono::prelude::*;
+
 pub fn github_events(config: Config) {
     let (sender, receiver) = mpsc::channel();
     let number_of_repos = config.repos.len();
@@ -119,14 +120,18 @@ pub fn github_events(config: Config) {
 
         let response_data: timeline::ResponseData =
             response_body.data.expect("missing response data");
-        //        let stars: Option<i64> = response_data
-        //            .repository
-        //            .as_ref()
-        //            .map(|repo| repo.stargazers.total_count);
 
-        //        if let Some(errors) = response_body.errors {
-        //            println!("there are errors:");
-        //        }
+        for edge in &response_data
+            .repository
+            .expect("No repository")
+            .pull_requests
+            .edges
+            .expect("No edges")
+        {
+            if let Some(edge) = edge {
+                println!("1 edge");
+            }
+        }
     }
     for _ in 0..number_of_repos {
         let repo_events = receiver.recv().unwrap();
