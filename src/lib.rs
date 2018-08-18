@@ -104,18 +104,25 @@ pub fn github_events(config: Config) {
             )))
             .json(&query)
             .send();
-        println!("{:?}", response);
-        let response = match response.unwrap().json() {
-            Ok(r) => {
-                println!("It worked!");
-                return r;
+
+        let response_body: GraphQLResponse<timeline::ResponseData> =
+            response.unwrap().json().unwrap();
+        info!("{:?}", response_body);
+
+        if let Some(errors) = response_body.errors {
+            println!("there are errors:");
+
+            for error in &errors {
+                println!("{:?}", error);
             }
-            Err(e) => {
-                println!("It failed! {:?}", e);
-            }
-        };
-        println!("graphql");
-        println!("{:?}", response);
+        }
+
+        let response_data: timeline::ResponseData =
+            response_body.data.expect("missing response data");
+        //        let stars: Option<i64> = response_data
+        //            .repository
+        //            .as_ref()
+        //            .map(|repo| repo.stargazers.total_count);
 
         //        if let Some(errors) = response_body.errors {
         //            println!("there are errors:");
