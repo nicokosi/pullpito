@@ -93,7 +93,7 @@ pub fn github_events(config: Config) {
         let query = Timeline::build_query(timeline::Variables {
             owner: repo_with_org.get(0).unwrap().to_string(),
             repository: repo_with_org.get(1).unwrap().to_string(),
-            since: Utc::now().to_string(),
+            since: Utc::now().to_rfc3339(),
         });
         let client = reqwest::Client::new();
         let token = config.token.clone();
