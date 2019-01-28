@@ -26,7 +26,7 @@ pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>
                 return Err(Error::new(
                     ErrorKind::Other,
                     format!("Cannot connect to GitHub API: {}", error),
-                ))
+                ));
             }
         };
         if resp.status() != StatusCode::Ok {
@@ -74,7 +74,7 @@ pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>
                 return Err(Error::new(
                     ErrorKind::Other,
                     format!("Cannot deserialize GitHub API content: {}", error),
-                ))
+                ));
             }
         };
 
@@ -86,9 +86,11 @@ pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>
                 let last_page = last_page_from_link_header(link_header);
                 debug!("Last page: {:?} (current page: {})", last_page, page);
                 match last_page {
-                    Some(last_page) => if page == last_page {
-                        break;
-                    },
+                    Some(last_page) => {
+                        if page == last_page {
+                            break;
+                        }
+                    }
                     None => break,
                 }
             }
@@ -114,7 +116,9 @@ pub struct RawEvent {
     pub actor: Actor,
     pub payload: Payload,
     #[serde(
-        rename = "type", deserialize_with = "deserialize_field_type", default = "Type::default"
+        rename = "type",
+        deserialize_with = "deserialize_field_type",
+        default = "Type::default"
     )]
     pub event_type: Type,
     pub created_at: DateTime<Utc>,
@@ -127,7 +131,10 @@ pub struct Actor {
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
 pub struct Payload {
-    #[serde(deserialize_with = "deserialize_field_action", default = "Action::default")]
+    #[serde(
+        deserialize_with = "deserialize_field_action",
+        default = "Action::default"
+    )]
     pub action: Action,
 }
 
@@ -207,7 +214,8 @@ mod tests {
         assert_eq!(
             raw_github_events(include_str!(
                 "../../test/github_event_with_unknown_enums.json"
-            )).unwrap()[0],
+            ))
+            .unwrap()[0],
             RawEvent {
                 actor: Actor {
                     login: "alice".to_string(),
