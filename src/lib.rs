@@ -8,10 +8,9 @@ extern crate log;
 extern crate regex;
 #[macro_use]
 extern crate serde_derive;
-#[macro_use]
 extern crate structopt;
 
-use github_events::{github_events as _github_events, Action, RawEvent, Type};
+use crate::github_events::{github_events as _github_events, Action, RawEvent, Type};
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::str;
@@ -106,7 +105,7 @@ fn events_per_author(events: Vec<RawEvent>) -> HashMap<String, Vec<RawEvent>> {
             (*acc
                 .entry(event.actor.login.clone())
                 .or_insert_with(Vec::new))
-                .push(event);
+            .push(event);
             acc
         })
 }
@@ -116,7 +115,7 @@ fn printable(repo: &str, events_per_author: &HashMap<String, Vec<RawEvent>>) -> 
     out.push_str("  opened per author:\n");
     for (author, events) in events_per_author.iter() {
         let opened_pull_requests = events
-            .into_iter()
+            .iter()
             .filter(|e| {
                 e.event_type == Type::PullRequestEvent && e.payload.action == Action::opened
             })
@@ -128,7 +127,7 @@ fn printable(repo: &str, events_per_author: &HashMap<String, Vec<RawEvent>>) -> 
     out.push_str("  commented per author:\n");
     for (author, events) in events_per_author.iter() {
         let commented_pull_requests = events
-            .into_iter()
+            .iter()
             .filter(|e| {
                 e.event_type == Type::IssueCommentEvent && e.payload.action == Action::created
             })
@@ -140,7 +139,7 @@ fn printable(repo: &str, events_per_author: &HashMap<String, Vec<RawEvent>>) -> 
     out.push_str("  closed per author:\n");
     for (author, events) in events_per_author.iter() {
         let closed_pull_requests = events
-            .into_iter()
+            .iter()
             .filter(|e| {
                 e.event_type == Type::PullRequestEvent && e.payload.action == Action::closed
             })
@@ -154,14 +153,14 @@ fn printable(repo: &str, events_per_author: &HashMap<String, Vec<RawEvent>>) -> 
 
 #[cfg(test)]
 mod test {
+    use crate::config_from_args;
+    use crate::events_per_author;
+    use crate::github_events::{Action, Actor, Payload, RawEvent, Type};
+    use crate::printable;
+    use crate::Config;
+    use crate::OsString;
     use chrono::{TimeZone, Utc};
-    use config_from_args;
-    use events_per_author;
-    use github_events::{Action, Actor, Payload, RawEvent, Type};
-    use printable;
     use std::collections::HashMap;
-    use Config;
-    use OsString;
 
     #[test]
     fn parse_args_with_a_long_repo_param() {
@@ -270,7 +269,7 @@ mod test {
             event_type: Type::PullRequestEvent,
             created_at: Utc.ymd(2016, 12, 1).and_hms(16, 26, 43),
         }]);
-        assert_eq!(events_per_author.get("alice").into_iter().len(), 1);
+        assert_eq!(events_per_author.get("alice").iter().len(), 1);
     }
 
 }
