@@ -5,6 +5,10 @@ Command-line for GitHub pull request statistics, similar to [hubstats](https://g
 Implemented while learning [Rust](https://www.rust-lang.org/) 🦀, reading [The Rust Programming Language](https://doc.rust-lang.org/stable/book/second-edition/) 🎓.
 
 
+## Pre-requisite
+
+Install the Rust toolchain via https://rustup.rs/.
+
 ## Run
 
 In order to display pull request events for a **single** public GitHub repository, run `cargo --repository $org/$repo` or `cargo -r $org/$repo`.
@@ -39,3 +43,10 @@ RUST_LOG=pullpito=debug cargo run -- --repository nicokosi/pullpito
 ## Install
 
 Run `cargo install ~/.cargo/bin/pullpito`. You can then run the `pullpito` command directly.
+
+
+## Development cheat-sheet
+
+- Compile and run tests: `cargo test`
+- Format all the code: `cargo fmt`
+- Run the linter: `cargo clippy`
