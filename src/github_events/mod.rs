@@ -52,19 +52,18 @@ pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>
                     body
                 }
             }
-            Err(error) => match error.status() {
-                Some(reqwest::StatusCode::UnprocessableEntity) => {
+            Err(error) => {
+                if let Some(reqwest::StatusCode::UnprocessableEntity) = error.status() {
                     debug!("No more content for {:?} (page number: {})", repo, page);
                     break;
-                }
-                _ => {
+                } else {
                     debug!("Oops, something went wrong with GitHub API {:?}", error);
                     return Err(Error::new(
                         ErrorKind::Other,
                         format!("Cannot get GitHub API content: {}", error),
                     ));
                 }
-            },
+            }
         };
 
         let raw_events_per_page = raw_github_events(&body);
