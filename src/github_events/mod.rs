@@ -259,5 +259,4 @@ mod tests {
         let last_page = last_page_from_link_header("moo");
         assert_eq!(last_page, None);
     }
-
 }

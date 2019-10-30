@@ -271,5 +271,4 @@ mod test {
         }]);
         assert_eq!(events_per_author.get("alice").iter().len(), 1);
     }
-
 }
