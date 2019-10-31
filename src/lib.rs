@@ -38,8 +38,9 @@ struct Options {
     #[structopt(
         long = "repository",
         help = "the name of a GitHub repository, i.e. 'python/peps'",
-        raw(required = "true"),
-        raw(takes_value = "true"),
+        required = true,
+        takes_value = true,
+        multiple = true,
         short = "r"
     )]
     repositories: Vec<String>,
