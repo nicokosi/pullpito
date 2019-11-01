@@ -29,7 +29,7 @@ pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>
                 ));
             }
         };
-        if resp.status() != StatusCode::Ok {
+        if resp.status() != StatusCode::OK {
             return Err(Error::new(
                 ErrorKind::Other,
                 format!("GitHub API error: {:?}", resp.status()),
@@ -53,7 +53,7 @@ pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>
                 }
             }
             Err(error) => {
-                if let Some(reqwest::StatusCode::UnprocessableEntity) = error.status() {
+                if let Some(reqwest::StatusCode::UNPROCESSABLE_ENTITY) = error.status() {
                     debug!("No more content for {:?} (page number: {})", repo, page);
                     break;
                 } else {
@@ -78,11 +78,10 @@ pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>
         };
 
         // Stop iterating on event pages if current page is the last one
-        let link_header = resp.headers().get_raw("Link");
-        match link_header {
+        match resp.headers().get("Link").as_ref() {
             Some(link_header) => {
-                let link_header = str::from_utf8(link_header.one().unwrap()).unwrap();
-                let last_page = last_page_from_link_header(link_header);
+                let link_header = link_header.as_bytes();
+                let last_page = last_page_from_link_header(str::from_utf8(&link_header).unwrap());
                 debug!("Last page: {:?} (current page: {})", last_page, page);
                 match last_page {
                     Some(last_page) => {
