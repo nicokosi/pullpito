@@ -1,14 +1,10 @@
-extern crate chrono;
-extern crate env_logger;
-extern crate futures;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
-extern crate regex;
+
 #[macro_use]
 extern crate serde_derive;
-extern crate structopt;
 
 use crate::github_events::{github_events as _github_events, Action, RawEvent, Type};
 use std::collections::HashMap;
@@ -19,7 +15,6 @@ use std::thread;
 use structopt::StructOpt;
 
 pub mod github_events;
-extern crate serde;
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Config {

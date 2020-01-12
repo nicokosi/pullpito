@@ -1,6 +1,6 @@
-extern crate regex;
-extern crate reqwest;
-extern crate serde_json;
+use regex;
+use reqwest;
+use serde_json;
 
 use self::reqwest::StatusCode;
 use chrono::{DateTime, Utc};
