@@ -148,10 +148,10 @@ fn printable(repo: &str, events_per_author: &HashMap<String, Vec<RawEvent>>) -> 
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
+    use super::github_events::*;
     use crate::config_from_args;
     use crate::events_per_author;
-    use crate::github_events::{Action, Actor, Payload, RawEvent, Type};
     use crate::printable;
     use crate::Config;
     use crate::OsString;
