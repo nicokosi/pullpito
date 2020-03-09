@@ -181,13 +181,9 @@ where
     Ok(Type::deserialize(deserializer).unwrap_or(Type::Unknown))
 }
 
+#[cfg(test)]
 mod tests {
-
-    #[allow(unused_imports)]
-    // Seems an open issue: https://github.com/rust-lang/rust/issues/43970
     use super::*;
-    #[allow(unused_imports)]
-    // Seems an open issue: https://github.com/rust-lang/rust/issues/43970
     use chrono::{TimeZone, Utc};
 
     #[test]
