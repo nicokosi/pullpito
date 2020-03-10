@@ -1,12 +1,7 @@
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate log;
-
-#[macro_use]
-extern crate serde_derive;
-
 use crate::github_events::{github_events as _github_events, Action, RawEvent, Type};
+use log::debug;
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::str;

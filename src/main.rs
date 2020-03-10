@@ -1,6 +1,5 @@
 use env_logger;
-#[macro_use]
-extern crate log;
+use log::info;
 use pullpito;
 
 use std::env;
