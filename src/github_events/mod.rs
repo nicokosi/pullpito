@@ -4,6 +4,9 @@ use serde_json;
 
 use self::reqwest::StatusCode;
 use chrono::{DateTime, Utc};
+use lazy_static::lazy_static;
+use log::debug;
+use log::trace;
 use regex::Regex;
 use serde::{Deserialize, Deserializer};
 use std::io::{Error, ErrorKind};
