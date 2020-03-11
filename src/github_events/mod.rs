@@ -2,7 +2,6 @@ use regex;
 use reqwest;
 use serde_json;
 
-use self::reqwest::StatusCode;
 use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;
 use log::debug;
@@ -22,22 +21,8 @@ pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>
             &token.unwrap_or_else(|| "".to_string()),
             page,
         );
-        let resp = reqwest::get(url.as_str());
-        let mut resp = match resp {
-            Ok(resp) => resp,
-            Err(error) => {
-                return Err(Error::new(
-                    ErrorKind::Other,
-                    format!("Cannot connect to GitHub API: {}", error),
-                ));
-            }
-        };
-        if resp.status() != StatusCode::OK {
-            return Err(Error::new(
-                ErrorKind::Other,
-                format!("GitHub API error: {:?}", resp.status()),
-            ));
-        }
+
+        let mut resp = reqwest::get(url.as_str()).expect("Cannot connect to GitHub API");
         let body = resp.text();
         let body = match body {
             Ok(body) => {
@@ -69,16 +54,9 @@ pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>
             }
         };
 
-        let raw_events_per_page = raw_github_events(&body);
-        match raw_events_per_page {
-            Ok(mut events) => raw_events.append(&mut events),
-            Err(error) => {
-                return Err(Error::new(
-                    ErrorKind::Other,
-                    format!("Cannot deserialize GitHub API content: {}", error),
-                ));
-            }
-        };
+        let mut raw_events_per_page =
+            raw_github_events(&body).expect("Cannot deserialize GitHub API content");
+        raw_events.append(&mut raw_events_per_page);
 
         // Stop iterating on event pages if current page is the last one
         match resp.headers().get("Link").as_ref() {
