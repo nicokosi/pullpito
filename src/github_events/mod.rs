@@ -22,7 +22,8 @@ pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>
             page,
         );
 
-        let mut resp = reqwest::get(url.as_str()).expect("Cannot connect to GitHub API");
+        let resp = reqwest::blocking::get(url.as_str()).expect("Cannot connect to GitHub API");
+        let headers = resp.headers().clone();
         let body = resp.text();
         let body = match body {
             Ok(body) => {
@@ -59,7 +60,7 @@ pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>
         raw_events.append(&mut raw_events_per_page);
 
         // Stop iterating on event pages if current page is the last one
-        match resp.headers().get("Link").as_ref() {
+        match headers.get("Link").as_ref() {
             Some(link_header) => {
                 let link_header = link_header.as_bytes();
                 let last_page = last_page_from_link_header(str::from_utf8(&link_header).unwrap());
