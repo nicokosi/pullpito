@@ -20,8 +20,8 @@ addons:
       - kalakris-cmake
 
 before_script:
-  - cargo install --force cargo-travis
   - export PATH=$HOME/.cargo/bin:$PATH
+#  - cargo install --force cargo-travis
   - rustup component add rustfmt-preview
 
 script:
@@ -30,7 +30,7 @@ script:
   - cargo test
 
 after_success:
-  - cargo coveralls
+#  - cargo coveralls
 
 env:
   global:
