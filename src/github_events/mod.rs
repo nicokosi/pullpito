@@ -1,7 +1,3 @@
-use regex;
-use reqwest;
-use serde_json;
-
 use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;
 use log::debug;

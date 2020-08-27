@@ -139,7 +139,7 @@ fn printable(repo: &str, events_per_author: &HashMap<String, Vec<RawEvent>>) -> 
             out.push_str(&format!("    {}: {}\n", author, closed_pull_requests));
         }
     }
-    out.to_string()
+    out
 }
 
 #[cfg(test)]

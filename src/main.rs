@@ -1,6 +1,4 @@
-use env_logger;
 use log::info;
-use pullpito;
 
 use std::env;
 
