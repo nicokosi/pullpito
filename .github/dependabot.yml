@@ -1,0 +1,18 @@
+version: 2
+updates:
+- package-ecosystem: cargo
+  directory: "/"
+  schedule:
+    interval: monthly
+    time: "20:00"
+  open-pull-requests-limit: 2
+  ignore:
+  - dependency-name: serde_json
+    versions:
+    - 1.0.61
+  - dependency-name: futures
+    versions:
+    - 0.3.12
+  - dependency-name: reqwest
+    versions:
+    - 0.10.8
