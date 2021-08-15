@@ -58,7 +58,7 @@ pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>
         match resp.headers().get("Link").as_ref() {
             Some(link_header) => {
                 let link_header = link_header.as_bytes();
-                let last_page = last_page_from_link_header(str::from_utf8(&link_header).unwrap());
+                let last_page = last_page_from_link_header(str::from_utf8(link_header).unwrap());
                 debug!("Last page: {:?} (current page: {})", last_page, page);
                 match last_page {
                     Some(last_page) => {
@@ -76,7 +76,7 @@ pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>
 }
 
 fn raw_github_events(json: &str) -> Result<Vec<RawEvent>, serde_json::Error> {
-    serde_json::from_str::<Vec<RawEvent>>(&json)
+    serde_json::from_str::<Vec<RawEvent>>(json)
 }
 
 fn last_page_from_link_header(link_header: &str) -> Option<u32> {
