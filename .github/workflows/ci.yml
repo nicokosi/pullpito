@@ -9,15 +9,5 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: icepuma/rust-action@master
-
-      - name: Check format
-        run: cargo fmt -- --check
-
-      - name: Lint
-        run: cargo clippy -- -Dwarnings
-
-      - name: Build
-        run: cargo build
-
-      - name: Test
-        run: cargo test
+        with:
+          args: cargo fmt -- --check && cargo clippy -- -Dwarnings && cargo test
