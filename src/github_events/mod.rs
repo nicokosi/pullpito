@@ -7,7 +7,7 @@ use serde::{Deserialize, Deserializer};
 use std::io::{Error, ErrorKind};
 use std::str;
 
-pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>, Error> {
+pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>, Error> {
     let mut raw_events: Vec<RawEvent> = Vec::new();
     for page in 1..10 {
         let token = token.clone();
