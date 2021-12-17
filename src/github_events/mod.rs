@@ -25,28 +25,26 @@ pub fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>
                 if body.len() <= "[]".len() {
                     debug!("No more content for {:?} (page number: {})", repo, page);
                     break;
-                } else {
-                    debug!("Content found for {:?} (page number: {})", repo, page);
-                    trace!(
-                        "Content found for {:?} (page number: {}): {:?}",
-                        repo,
-                        page,
-                        body
-                    );
-                    body
                 }
+                debug!("Content found for {:?} (page number: {})", repo, page);
+                trace!(
+                    "Content found for {:?} (page number: {}): {:?}",
+                    repo,
+                    page,
+                    body
+                );
+                body
             }
             Err(error) => {
                 if let Some(reqwest::StatusCode::UNPROCESSABLE_ENTITY) = error.status() {
                     debug!("No more content for {:?} (page number: {})", repo, page);
                     break;
-                } else {
-                    debug!("Oops, something went wrong with GitHub API {:?}", error);
-                    return Err(Error::new(
-                        ErrorKind::Other,
-                        format!("Cannot get GitHub API content: {}", error),
-                    ));
                 }
+                debug!("Oops, something went wrong with GitHub API {:?}", error);
+                return Err(Error::new(
+                    ErrorKind::Other,
+                    format!("Cannot get GitHub API content: {}", error),
+                ));
             }
         };
 
