@@ -1,13 +1,16 @@
-use crate::github_events::{github_events as _github_events, Action, RawEvent, Type};
-use log::debug;
-use serde::Deserialize;
-use serde::Serialize;
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::str;
 use std::sync::mpsc;
 use std::thread;
+
+use log::debug;
+use log::info;
+use serde::Deserialize;
+use serde::Serialize;
 use structopt::StructOpt;
+
+use crate::github_events::{github_events as _github_events, Action, RawEvent, Type};
 
 pub mod github_events;
 
@@ -43,7 +46,7 @@ struct Options {
     token: Option<String>,
 }
 
-pub fn config_from_args(args: Vec<OsString>) -> Config {
+fn config_from_args(args: Vec<OsString>) -> Config {
     let options = Options::from_iter(args);
     Config {
         repos: options.repositories,
@@ -51,7 +54,15 @@ pub fn config_from_args(args: Vec<OsString>) -> Config {
     }
 }
 
-pub fn github_events(config: Config) {
+pub fn log_github_events(os: Vec<OsString>) {
+    env_logger::init();
+    let config = config_from_args(os);
+    info!(
+        "Computing stats for GitHub repos '{:?}' (with token: {})",
+        config.repos,
+        config.token.is_some()
+    );
+
     let (sender, receiver) = mpsc::channel();
     let number_of_repos = config.repos.len();
 
@@ -144,14 +155,17 @@ fn printable(repo: &str, events_per_author: &HashMap<String, Vec<RawEvent>>) -> 
 
 #[cfg(test)]
 mod tests {
-    use super::github_events::*;
+    use std::collections::HashMap;
+
+    use chrono::{TimeZone, Utc};
+
     use crate::config_from_args;
     use crate::events_per_author;
     use crate::printable;
     use crate::Config;
     use crate::OsString;
-    use chrono::{TimeZone, Utc};
-    use std::collections::HashMap;
+
+    use super::github_events::*;
 
     #[test]
     fn parse_args_with_a_long_repo_param() {
