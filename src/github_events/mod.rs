@@ -132,7 +132,7 @@ fn deserialize_field_action<'de, D>(deserializer: D) -> Result<Action, D::Error>
 where
     D: Deserializer<'de>,
 {
-    Ok(Action::deserialize(deserializer).unwrap_or(Action::Unknown))
+    Action::deserialize(deserializer).or(Ok(Action::Unknown))
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
@@ -153,7 +153,7 @@ fn deserialize_field_type<'de, D>(deserializer: D) -> Result<Type, D::Error>
 where
     D: Deserializer<'de>,
 {
-    Ok(Type::deserialize(deserializer).unwrap_or(Type::Unknown))
+    Type::deserialize(deserializer).or(Ok(Type::Unknown))
 }
 
 #[cfg(test)]
