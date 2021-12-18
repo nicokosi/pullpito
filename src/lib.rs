@@ -54,6 +54,11 @@ fn config_from_args(args: Vec<OsString>) -> Config {
     }
 }
 
+/// Calls GitHub REST API in order to log pull requests' statistics in the standard output.
+///
+/// # Panics
+///
+/// Panics if the GitHub API request fails or if response cannot be deserialized.
 pub fn log_github_events(os: Vec<OsString>) {
     env_logger::init();
     let config = config_from_args(os);
