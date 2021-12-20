@@ -1,26 +1,31 @@
+use std::io::{Error, ErrorKind};
+use std::str;
+
 use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;
 use log::debug;
 use log::trace;
 use regex::Regex;
+use reqwest::header;
 use serde::{Deserialize, Deserializer};
-use std::io::{Error, ErrorKind};
-use std::str;
 
 pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>, Error> {
     let mut raw_events: Vec<RawEvent> = Vec::new();
     for page in 1..10 {
         let token = token.clone();
-        let url = format!(
-            "https://api.github.com/repos/{}/events?access_token={}&page={}",
-            repo,
-            &token.unwrap_or_else(|| "".to_string()),
-            page,
-        );
-
-        let mut resp = reqwest::get(url.as_str()).expect("Cannot connect to GitHub API");
-        let body = resp.text();
-        let body = match body {
+        let url = format!("https://api.github.com/repos/{}/events?page={}", repo, page,);
+        let mut headers = header::HeaderMap::new();
+        if token.is_some() {
+            let mut value = "token ".to_string();
+            value.push_str(&token.unwrap_or_default());
+            headers.insert(reqwest::header::AUTHORIZATION, value.parse().unwrap());
+        }
+        let mut resp = reqwest::Client::new()
+            .get(url.as_str())
+            .headers(headers)
+            .send()
+            .expect("Cannot connect to GitHub API");
+        let body = match resp.text() {
             Ok(body) => {
                 if body.len() <= "[]".len() {
                     debug!("No more content for {:?} (page number: {})", repo, page);
@@ -74,12 +79,13 @@ pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<Ra
 }
 
 fn raw_github_events(json: &str) -> Result<Vec<RawEvent>, serde_json::Error> {
+    debug!("{}", json);
     serde_json::from_str::<Vec<RawEvent>>(json)
 }
 
 fn last_page_from_link_header(link_header: &str) -> Option<u32> {
     lazy_static! {
-        static ref RE: Regex = Regex::new(".*&page=(\\d+)>; rel=\"last\".*").unwrap();
+        static ref RE: Regex = Regex::new(".*page=(\\d+)>; rel=\"last\".*").unwrap();
     }
     RE.captures(link_header).map(|c| c[1].parse().unwrap())
 }
@@ -158,8 +164,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use chrono::{TimeZone, Utc};
+
+    use super::*;
 
     #[test]
     fn parse_github_events() {
@@ -211,17 +218,24 @@ mod tests {
     }
 
     #[test]
-    fn parse_github_link_header_for_page_1() {
+    fn parse_github_link_header_for_page_1_over_10() {
         let last_page = last_page_from_link_header(
-            "<https://api.github.com/repositories/128516862/events?access_token=xxx&page=2>; rel=\"next\", <https://api.github.com/repositories/128516862/events?access_token=xxx&page=5>; rel=\"last\"");
-        assert_eq!(last_page, Some(5));
+            "<https://api.github.com/repositories/257951013/events?page=2>; rel=\"next\", <https://api.github.com/repositories/257951013/events?page=10>; rel=\"last\"");
+        assert_eq!(last_page, Some(10));
     }
 
     #[test]
-    fn parse_github_link_header_for_other_pages() {
+    fn parse_github_link_header_for_page_2_over_10() {
         let last_page = last_page_from_link_header(
-            "<https://api.github.com/repositories/128516862/events?access_tokenxxx=&page=1>; rel=\"prev\", <https://api.github.com/repositories/128516862/events?access_token=xxx&page=3>; rel=\"next\", <https://api.github.com/repositories/128516862/events?access_token=xxx&page=5>; rel=\"last\", <https://api.github.com/repositories/128516862/events?access_token=xxx&page=1>; rel=\"first\"");
-        assert_eq!(last_page, Some(5));
+            "<https://api.github.com/repositories/257951013/events?page=1>; rel=\"prev\", <https://api.github.com/repositories/257951013/events?page=3>; rel=\"next\", <https://api.github.com/repositories/257951013/events?page=10>; rel=\"last\", <https://api.github.com/repositories/257951013/events?page=1>; rel=\"first\"");
+        assert_eq!(last_page, Some(10));
+    }
+
+    #[test]
+    fn parse_github_link_header_for_page_10_over_10() {
+        let last_page = last_page_from_link_header(
+            "<https://api.github.com/repositories/257951013/events?page=9>; rel=\"prev\", <https://api.github.com/repositories/257951013/events?page=1>; rel=\"first\"");
+        assert_eq!(last_page, None);
     }
 
     #[test]
