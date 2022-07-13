@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::ffi::OsString;
+use std::fmt::Write as _;
 use std::str;
 use std::sync::mpsc;
 use std::thread;
@@ -128,7 +129,7 @@ fn printable(repo: &str, events_per_author: &HashMap<String, Vec<RawEvent>>) -> 
             })
             .count();
         if opened_pull_requests > 0 {
-            out.push_str(&format!("    {}: {}\n", author, opened_pull_requests));
+            let _ = writeln!(out, "    {}: {}", author, opened_pull_requests);
         }
     }
     out.push_str("  commented per author:\n");
@@ -140,7 +141,7 @@ fn printable(repo: &str, events_per_author: &HashMap<String, Vec<RawEvent>>) -> 
             })
             .count();
         if commented_pull_requests > 0 {
-            out.push_str(&format!("    {}: {}\n", author, commented_pull_requests));
+            let _ = writeln!(out, "    {}: {}", author, commented_pull_requests);
         }
     }
     out.push_str("  closed per author:\n");
@@ -152,7 +153,7 @@ fn printable(repo: &str, events_per_author: &HashMap<String, Vec<RawEvent>>) -> 
             })
             .count();
         if closed_pull_requests > 0 {
-            out.push_str(&format!("    {}: {}\n", author, closed_pull_requests));
+            let _ = writeln!(out, "    {}: {}", author, closed_pull_requests);
         }
     }
     out
