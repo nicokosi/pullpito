@@ -40,7 +40,7 @@ RUST_LOG=pullpito=debug cargo run -- --repository nicokosi/pullpito
 
 ## Install
 
-Run `cargo install --path .`. You can then run the `pullpito` command directly.
+Run `cargo install --path .`. You can then run the `target/release/pullpito` command directly.
 
 ## Development cheat-sheet
 
