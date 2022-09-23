@@ -15,7 +15,7 @@ use crate::github_events::{github_events as _github_events, Action, RawEvent, Ty
 
 pub mod github_events;
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct Config {
     pub repos: Vec<String>,
     pub token: Option<String>,
