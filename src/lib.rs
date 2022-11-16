@@ -91,7 +91,7 @@ pub fn log_github_events(os: Vec<OsString>) {
         debug!("Print stats for GitHub repo {:?}", repo_events.repo);
         println!(
             "{}",
-            printable(&repo_events.repo, &repo_events.events_per_author)
+            print_events_per_author(&repo_events.repo, &repo_events.events_per_author)
         );
     }
 }
@@ -118,45 +118,36 @@ fn events_per_author(events: Vec<RawEvent>) -> HashMap<String, Vec<RawEvent>> {
         })
 }
 
-fn printable(repo: &str, events_per_author: &HashMap<String, Vec<RawEvent>>) -> String {
+fn print_events_per_author(
+    repo: &str,
+    events_per_author: &HashMap<String, Vec<RawEvent>>,
+) -> String {
     let mut out: String = format!("pull requests for {:?} ->\n", repo);
     out.push_str("  opened per author:\n");
-    for (author, events) in events_per_author.iter() {
-        let opened_pull_requests = events
-            .iter()
-            .filter(|e| {
-                e.event_type == Type::PullRequestEvent && e.payload.action == Action::opened
-            })
-            .count();
-        if opened_pull_requests > 0 {
-            let _ = writeln!(out, "    {}: {}", author, opened_pull_requests);
-        }
-    }
+    print_pull_request_events_per_author(events_per_author, Action::opened, &mut out);
     out.push_str("  commented per author:\n");
-    for (author, events) in events_per_author.iter() {
-        let commented_pull_requests = events
-            .iter()
-            .filter(|e| {
-                e.event_type == Type::IssueCommentEvent && e.payload.action == Action::created
-            })
-            .count();
-        if commented_pull_requests > 0 {
-            let _ = writeln!(out, "    {}: {}", author, commented_pull_requests);
-        }
-    }
+    print_pull_request_events_per_author(events_per_author, Action::created, &mut out);
     out.push_str("  closed per author:\n");
+    print_pull_request_events_per_author(events_per_author, Action::closed, &mut out);
+    out
+}
+
+fn print_pull_request_events_per_author(
+    events_per_author: &HashMap<String, Vec<RawEvent>>,
+    payload_action: Action,
+    out: &mut String,
+) {
     for (author, events) in events_per_author.iter() {
-        let closed_pull_requests = events
+        let matching_pull_requests = events
             .iter()
             .filter(|e| {
-                e.event_type == Type::PullRequestEvent && e.payload.action == Action::closed
+                e.event_type == Type::PullRequestEvent && e.payload.action == payload_action
             })
             .count();
-        if closed_pull_requests > 0 {
-            let _ = writeln!(out, "    {}: {}", author, closed_pull_requests);
+        if matching_pull_requests > 0 {
+            let _ = writeln!(out, "    {}: {}", author, matching_pull_requests);
         }
     }
-    out
 }
 
 #[cfg(test)]
@@ -167,7 +158,7 @@ mod tests {
 
     use crate::config_from_args;
     use crate::events_per_author;
-    use crate::printable;
+    use crate::print_events_per_author;
     use crate::Config;
     use crate::OsString;
 
@@ -260,7 +251,7 @@ mod tests {
             }],
         );
 
-        let printable = printable("my-org/my-repo", &events);
+        let printable = print_events_per_author("my-org/my-repo", &events);
 
         assert!(printable.contains("pull requests for \"my-org/my-repo\" ->"));
         assert!(printable.contains("opened per author:\n    alice: 1\n"));
