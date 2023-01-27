@@ -13,7 +13,7 @@ pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<Ra
     let mut raw_events: Vec<RawEvent> = Vec::new();
     for page in 1..10 {
         let token = token.clone();
-        let url = format!("https://api.github.com/repos/{}/events?page={}", repo, page,);
+        let url = format!("https://api.github.com/repos/{repo}/events?page={page}");
         let mut headers = header::HeaderMap::new();
         if token.is_some() {
             let mut value = "token ".to_string();
@@ -48,7 +48,7 @@ pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<Ra
                 debug!("Oops, something went wrong with GitHub API {:?}", error);
                 return Err(Error::new(
                     ErrorKind::Other,
-                    format!("Cannot get GitHub API content: {}", error),
+                    format!("Cannot get GitHub API content: {error}"),
                 ));
             }
         };
