@@ -122,7 +122,7 @@ fn print_events_per_author(
     repo: &str,
     events_per_author: &HashMap<String, Vec<RawEvent>>,
 ) -> String {
-    let mut out: String = format!("pull requests for {:?} ->\n", repo);
+    let mut out: String = format!("pull requests for {repo:?} ->\n");
     out.push_str("  opened per author:\n");
     print_pull_request_events_per_author(events_per_author, Action::opened, &mut out);
     out.push_str("  commented per author:\n");
@@ -145,7 +145,7 @@ fn print_pull_request_events_per_author(
             })
             .count();
         if matching_pull_requests > 0 {
-            let _ = writeln!(out, "    {}: {}", author, matching_pull_requests);
+            let _ = writeln!(out, "    {author}: {matching_pull_requests}");
         }
     }
 }
