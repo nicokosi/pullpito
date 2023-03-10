@@ -247,7 +247,7 @@ mod tests {
                     action: Action::opened,
                 },
                 event_type: Type::PullRequestEvent,
-                created_at: Utc.ymd(2016, 12, 1).and_hms(16, 26, 43),
+                created_at: Utc.with_ymd_and_hms(2016, 12, 1, 16, 26, 43).unwrap(),
             }],
         );
 
@@ -269,7 +269,7 @@ mod tests {
                 action: Action::opened,
             },
             event_type: Type::PullRequestEvent,
-            created_at: Utc.ymd(2016, 12, 1).and_hms(16, 26, 43),
+            created_at: Utc.with_ymd_and_hms(2016, 12, 1, 16, 26, 43).unwrap(),
         }]);
         assert_eq!(events_per_author.get("alice").iter().len(), 1);
     }

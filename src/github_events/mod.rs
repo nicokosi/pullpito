@@ -18,7 +18,7 @@ pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<Ra
         if token.is_some() {
             let mut value = "token ".to_string();
             value.push_str(&token.unwrap_or_default());
-            headers.insert(reqwest::header::AUTHORIZATION, value.parse().unwrap());
+            headers.insert(header::AUTHORIZATION, value.parse().unwrap());
         }
         let mut resp = reqwest::Client::new()
             .get(url.as_str())
@@ -180,7 +180,7 @@ mod tests {
                     action: Action::opened,
                 },
                 event_type: Type::PullRequestEvent,
-                created_at: Utc.ymd(2016, 12, 1).and_hms(16, 26, 43),
+                created_at: Utc.with_ymd_and_hms(2016, 12, 1, 16, 26, 43).unwrap(),
             }
         );
     }
@@ -200,7 +200,7 @@ mod tests {
                     action: Action::Unknown,
                 },
                 event_type: Type::Unknown,
-                created_at: Utc.ymd(2016, 12, 1).and_hms(16, 26, 43),
+                created_at: Utc.with_ymd_and_hms(2016, 12, 1, 16, 26, 43).unwrap(),
             }
         );
     }
