@@ -124,24 +124,24 @@ fn print_events_per_author(
 ) -> String {
     let mut out: String = format!("pull requests for {repo:?} ->\n");
     out.push_str("  opened per author:\n");
-    print_pull_request_events_per_author(events_per_author, Action::opened, &mut out);
+    print_pull_request_events_per_author(events_per_author, &Action::opened, &mut out);
     out.push_str("  commented per author:\n");
-    print_pull_request_events_per_author(events_per_author, Action::created, &mut out);
+    print_pull_request_events_per_author(events_per_author, &Action::created, &mut out);
     out.push_str("  closed per author:\n");
-    print_pull_request_events_per_author(events_per_author, Action::closed, &mut out);
+    print_pull_request_events_per_author(events_per_author, &Action::closed, &mut out);
     out
 }
 
 fn print_pull_request_events_per_author(
     events_per_author: &HashMap<String, Vec<RawEvent>>,
-    payload_action: Action,
+    payload_action: &Action,
     out: &mut String,
 ) {
     for (author, events) in events_per_author.iter() {
         let matching_pull_requests = events
             .iter()
             .filter(|e| {
-                e.event_type == Type::PullRequestEvent && e.payload.action == payload_action
+                e.event_type == Type::PullRequestEvent && &e.payload.action == payload_action
             })
             .count();
         if matching_pull_requests > 0 {
