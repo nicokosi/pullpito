@@ -1,6 +1,12 @@
 [package]
 name = "pullpito"
 version = "0.1.1"
+description = "Command-line for GitHub pull request statistics 🧪"
+repository = "https://github.com/nicokosi/pullpito"
+readme = "README.md"
+keywords = ["github", "cli", "pull-request", "summary"]
+categories = ["cli", "cli-tools"]
+license = "MIT"
 authors = ["Nicolas Kosinski <nicokosi@yahoo.com>"]
 edition = "2021"
 
