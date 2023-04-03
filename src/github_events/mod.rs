@@ -41,7 +41,7 @@ pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<Ra
                 body
             }
             Err(error) => {
-                if let Some(reqwest::StatusCode::UNPROCESSABLE_ENTITY) = error.status() {
+                if error.status() == Some(reqwest::StatusCode::UNPROCESSABLE_ENTITY) {
                     debug!("No more content for {:?} (page number: {})", repo, page);
                     break;
                 }
@@ -129,8 +129,8 @@ pub enum Action {
     Unknown,
 }
 impl Action {
-    fn default() -> Self {
-        Action::Unknown
+    const fn default() -> Self {
+        Self::Unknown
     }
 }
 
@@ -150,8 +150,8 @@ pub enum Type {
     Unknown,
 }
 impl Type {
-    fn default() -> Self {
-        Type::Unknown
+    const fn default() -> Self {
+        Self::Unknown
     }
 }
 
