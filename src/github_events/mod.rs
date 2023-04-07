@@ -21,11 +21,12 @@ pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<Ra
             headers.insert(header::AUTHORIZATION, value.parse().unwrap());
         }
         trace!("GET {}\n  headers: {:?}", url.as_str(), headers);
-        let mut resp = reqwest::Client::new()
+        let resp = reqwest::blocking::Client::new()
             .get(url.as_str())
             .headers(headers)
             .send()
-            .expect("Cannot connect to GitHub API");
+            .unwrap();
+        let headers = resp.headers().clone();
         let body = match resp.text() {
             Ok(body) => {
                 if body.len() <= "[]".len() {
@@ -59,7 +60,7 @@ pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<Ra
         raw_events.append(&mut raw_events_per_page);
 
         // Stop iterating on event pages if current page is the last one
-        match resp.headers().get("Link").as_ref() {
+        match headers.get("Link").as_ref() {
             Some(link_header) => {
                 let link_header = link_header.as_bytes();
                 let last_page = last_page_from_link_header(str::from_utf8(link_header).unwrap());
