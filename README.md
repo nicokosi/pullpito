@@ -32,10 +32,18 @@ For **several** GitHub repositories, use several `repository` arguments: `cargo 
 
 For more information, run `cargo run -- --help`.
 
-### Run with debug logs
+### Run with debug/trace logs
 
+Log level can be changed via the `RUST_LOG` environment variable.
+
+`DEBUG` logs add some internal info. They can be activated this way:
 ```sh
 RUST_LOG=pullpito=debug cargo run -- --repository nicokosi/pullpito
+```
+
+`TRACE` logs are more detailed and contain sensitive data like the GitHub token. They can be activated this way:
+```sh
+RUST_LOG=pullpito=trace cargo run -- --repository nicokosi/pullpito
 ```
 
 ## Install
