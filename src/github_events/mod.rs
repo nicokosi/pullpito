@@ -20,6 +20,7 @@ pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<Ra
             value.push_str(&token.unwrap_or_default());
             headers.insert(header::AUTHORIZATION, value.parse().unwrap());
         }
+        trace!("GET {}\n  headers: {:?}", url.as_str(), headers);
         let mut resp = reqwest::Client::new()
             .get(url.as_str())
             .headers(headers)
