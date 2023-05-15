@@ -4,10 +4,32 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: icepuma/rust-action@master
+      - name: Check out ⬅️
+        uses: actions/checkout@v2
+
+      - name: Install stable Rust 🦀
+        uses: actions-rs/toolchain@v1
         with:
-          args: cargo fmt -- --check && cargo clippy -- -Dwarnings && cargo test
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      - name: Check code format 💄
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
+
+      - name: Check code style 👮
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -Dwarnings
+
+      - name: Run tests 🔎
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
