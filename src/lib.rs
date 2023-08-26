@@ -137,7 +137,7 @@ fn print_pull_request_events_per_author(
     payload_action: &Action,
     out: &mut String,
 ) {
-    for (author, events) in events_per_author.iter() {
+    for (author, events) in events_per_author {
         let matching_pull_requests = events
             .iter()
             .filter(|e| {
