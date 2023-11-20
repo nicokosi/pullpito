@@ -110,10 +110,7 @@ fn events_per_author(events: Vec<RawEvent>) -> HashMap<String, Vec<RawEvent>> {
                 || e.event_type == Type::IssueCommentEvent
         })
         .fold(HashMap::new(), |mut acc, event: RawEvent| {
-            (*acc
-                .entry(event.actor.login.clone())
-                .or_insert_with(Vec::new))
-            .push(event);
+            (*acc.entry(event.actor.login.clone()).or_default()).push(event);
             acc
         })
 }
