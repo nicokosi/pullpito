@@ -37,9 +37,7 @@ pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<Ra
                 debug!("Content found for {:?} (page number: {})", repo, page);
                 trace!(
                     "Content found for {:?} (page number: {}): {:?}",
-                    repo,
-                    page,
-                    body
+                    repo, page, body
                 );
                 body
             }
@@ -223,21 +221,24 @@ mod tests {
     #[test]
     fn parse_github_link_header_for_page_1_over_10() {
         let last_page = last_page_from_link_header(
-            "<https://api.github.com/repositories/257951013/events?page=2>; rel=\"next\", <https://api.github.com/repositories/257951013/events?page=10>; rel=\"last\"");
+            "<https://api.github.com/repositories/257951013/events?page=2>; rel=\"next\", <https://api.github.com/repositories/257951013/events?page=10>; rel=\"last\"",
+        );
         assert_eq!(last_page, Some(10));
     }
 
     #[test]
     fn parse_github_link_header_for_page_2_over_10() {
         let last_page = last_page_from_link_header(
-            "<https://api.github.com/repositories/257951013/events?page=1>; rel=\"prev\", <https://api.github.com/repositories/257951013/events?page=3>; rel=\"next\", <https://api.github.com/repositories/257951013/events?page=10>; rel=\"last\", <https://api.github.com/repositories/257951013/events?page=1>; rel=\"first\"");
+            "<https://api.github.com/repositories/257951013/events?page=1>; rel=\"prev\", <https://api.github.com/repositories/257951013/events?page=3>; rel=\"next\", <https://api.github.com/repositories/257951013/events?page=10>; rel=\"last\", <https://api.github.com/repositories/257951013/events?page=1>; rel=\"first\"",
+        );
         assert_eq!(last_page, Some(10));
     }
 
     #[test]
     fn parse_github_link_header_for_page_10_over_10() {
         let last_page = last_page_from_link_header(
-            "<https://api.github.com/repositories/257951013/events?page=9>; rel=\"prev\", <https://api.github.com/repositories/257951013/events?page=1>; rel=\"first\"");
+            "<https://api.github.com/repositories/257951013/events?page=9>; rel=\"prev\", <https://api.github.com/repositories/257951013/events?page=1>; rel=\"first\"",
+        );
         assert_eq!(last_page, None);
     }
 

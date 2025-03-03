@@ -8,7 +8,7 @@ keywords = ["github", "cli", "pull-request", "summary"]
 categories = ["cli", "cli-tools"]
 license = "MIT"
 authors = ["Nicolas Kosinski <nicokosi@yahoo.com>"]
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 log = "0.4"
