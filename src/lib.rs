@@ -11,7 +11,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use structopt::StructOpt;
 
-use crate::github_events::{github_events as _github_events, Action, RawEvent, Type};
+use crate::github_events::{Action, RawEvent, Type, github_events as _github_events};
 
 pub mod github_events;
 
@@ -153,11 +153,11 @@ mod tests {
 
     use chrono::{TimeZone, Utc};
 
+    use crate::Config;
+    use crate::OsString;
     use crate::config_from_args;
     use crate::events_per_author;
     use crate::print_events_per_author;
-    use crate::Config;
-    use crate::OsString;
 
     use super::github_events::*;
 
