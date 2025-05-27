@@ -1,4 +1,4 @@
-use std::io::{Error, ErrorKind};
+use std::io::Error;
 use std::str;
 
 use chrono::{DateTime, Utc};
@@ -47,10 +47,9 @@ pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<Ra
                     break;
                 }
                 debug!("Oops, something went wrong with GitHub API {:?}", error);
-                return Err(Error::new(
-                    ErrorKind::Other,
-                    format!("Cannot get GitHub API content: {error}"),
-                ));
+                return Err(Error::other(format!(
+                    "Cannot get GitHub API content: {error}"
+                )));
             }
         };
 
