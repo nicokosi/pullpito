@@ -55,7 +55,7 @@ fn config_from_args(args: Vec<OsString>) -> Config {
     }
 }
 
-/// Calls GitHub REST API in order to log pull requests' statistics in the standard output.
+/// Calls GitHub GraphQL API in order to log pull requests' statistics in the standard output.
 ///
 /// # Panics
 ///
