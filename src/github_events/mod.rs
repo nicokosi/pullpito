@@ -2,10 +2,8 @@ use std::io::Error;
 use std::str;
 
 use chrono::{DateTime, Utc};
-use lazy_static::lazy_static;
 use log::debug;
 use log::trace;
-use regex::Regex;
 use reqwest::header;
 use serde::{Deserialize, Deserializer};
 
@@ -103,18 +101,6 @@ pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<Ra
     raw_events.extend(graphql_events);
 
     Ok(raw_events)
-}
-
-fn raw_github_events(json: &str) -> Result<Vec<RawEvent>, serde_json::Error> {
-    debug!("{}", json);
-    serde_json::from_str::<Vec<RawEvent>>(json)
-}
-
-fn last_page_from_link_header(link_header: &str) -> Option<u32> {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(".*page=(\\d+)>; rel=\"last\".*").unwrap();
-    }
-    RE.captures(link_header).map(|c| c[1].parse().unwrap())
 }
 
 /// Parses the JSON response from GitHub's GraphQL API and converts it to RawEvent objects.
@@ -387,90 +373,4 @@ where
     D: Deserializer<'de>,
 {
     Type::deserialize(deserializer).or(Ok(Type::Unknown))
-}
-
-#[cfg(test)]
-mod tests {
-    use chrono::{TimeZone, Utc};
-
-    use super::*;
-
-    #[test]
-    fn parse_github_events() {
-        assert_eq!(
-            raw_github_events(include_str!("../../test/github_events.json")).unwrap()[0],
-            RawEvent {
-                actor: Actor {
-                    login: "alice".to_string(),
-                },
-                payload: Payload {
-                    action: Action::opened,
-                },
-                event_type: Type::PullRequestEvent,
-                created_at: Utc.with_ymd_and_hms(2016, 12, 1, 16, 26, 43).unwrap(),
-            }
-        );
-    }
-
-    #[test]
-    fn parse_github_event_with_unknown_enums() {
-        assert_eq!(
-            raw_github_events(include_str!(
-                "../../test/github_event_with_unknown_enums.json"
-            ))
-            .unwrap()[0],
-            RawEvent {
-                actor: Actor {
-                    login: "alice".to_string(),
-                },
-                payload: Payload {
-                    action: Action::Unknown,
-                },
-                event_type: Type::Unknown,
-                created_at: Utc.with_ymd_and_hms(2016, 12, 1, 16, 26, 43).unwrap(),
-            }
-        );
-    }
-
-    #[test]
-    fn parse_real_github_events_from_nicokosi_pullpito() {
-        let events = raw_github_events(include_str!("../../test/pullpito_github_events.json"));
-        assert!(events.is_ok());
-    }
-
-    #[test]
-    fn parse_real_github_events_from_python_peps() {
-        let events = raw_github_events(include_str!("../../test/python_peps_github_events.json"));
-        assert!(events.is_ok());
-    }
-
-    #[test]
-    fn parse_github_link_header_for_page_1_over_10() {
-        let last_page = last_page_from_link_header(
-            "<https://api.github.com/repositories/257951013/events?page=2>; rel=\"next\", <https://api.github.com/repositories/257951013/events?page=10>; rel=\"last\"",
-        );
-        assert_eq!(last_page, Some(10));
-    }
-
-    #[test]
-    fn parse_github_link_header_for_page_2_over_10() {
-        let last_page = last_page_from_link_header(
-            "<https://api.github.com/repositories/257951013/events?page=1>; rel=\"prev\", <https://api.github.com/repositories/257951013/events?page=3>; rel=\"next\", <https://api.github.com/repositories/257951013/events?page=10>; rel=\"last\", <https://api.github.com/repositories/257951013/events?page=1>; rel=\"first\"",
-        );
-        assert_eq!(last_page, Some(10));
-    }
-
-    #[test]
-    fn parse_github_link_header_for_page_10_over_10() {
-        let last_page = last_page_from_link_header(
-            "<https://api.github.com/repositories/257951013/events?page=9>; rel=\"prev\", <https://api.github.com/repositories/257951013/events?page=1>; rel=\"first\"",
-        );
-        assert_eq!(last_page, None);
-    }
-
-    #[test]
-    fn parse_github_link_header_can_fail_because_of_unknown_header_value() {
-        let last_page = last_page_from_link_header("moo");
-        assert_eq!(last_page, None);
-    }
 }
