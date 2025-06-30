@@ -31,22 +31,19 @@ pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<Ra
         let body = match resp.text() {
             Ok(body) => {
                 if body.len() <= "[]".len() {
-                    debug!("No more content for {:?} (page number: {})", repo, page);
+                    debug!("No more content for {repo:?} (page number: {page})");
                     break;
                 }
-                debug!("Content found for {:?} (page number: {})", repo, page);
-                trace!(
-                    "Content found for {:?} (page number: {}): {:?}",
-                    repo, page, body
-                );
+                debug!("Content found for {repo:?} (page number: {page})");
+                trace!("Content found for {repo:?} (page number: {page}): {body:?}");
                 body
             }
             Err(error) => {
                 if error.status() == Some(reqwest::StatusCode::UNPROCESSABLE_ENTITY) {
-                    debug!("No more content for {:?} (page number: {})", repo, page);
+                    debug!("No more content for {repo:?} (page number: {page})");
                     break;
                 }
-                debug!("Oops, something went wrong with GitHub API {:?}", error);
+                debug!("Oops, something went wrong with GitHub API {error:?}");
                 return Err(Error::other(format!(
                     "Cannot get GitHub API content: {error}"
                 )));
@@ -62,7 +59,7 @@ pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<Ra
             Some(link_header) => {
                 let link_header = link_header.as_bytes();
                 let last_page = last_page_from_link_header(str::from_utf8(link_header).unwrap());
-                debug!("Last page: {:?} (current page: {})", last_page, page);
+                debug!("Last page: {last_page:?} (current page: {page})");
                 match last_page {
                     Some(last_page) => {
                         if page == last_page {
@@ -79,7 +76,7 @@ pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<Ra
 }
 
 fn raw_github_events(json: &str) -> Result<Vec<RawEvent>, serde_json::Error> {
-    debug!("{}", json);
+    debug!("{json}");
     serde_json::from_str::<Vec<RawEvent>>(json)
 }
 

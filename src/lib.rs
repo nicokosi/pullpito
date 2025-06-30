@@ -73,7 +73,7 @@ pub fn log_github_events(os: Vec<OsString>) {
     let number_of_repos = config.repos.len();
 
     for repo in config.repos {
-        debug!("Query stats for GitHub repo {:?}", repo);
+        debug!("Query stats for GitHub repo {repo:?}");
         let sender = mpsc::Sender::clone(&sender);
         let token = config.token.clone();
         thread::spawn(move || {
