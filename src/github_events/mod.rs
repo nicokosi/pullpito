@@ -2,10 +2,8 @@ use std::io::Error;
 use std::str;
 
 use chrono::{DateTime, Utc};
-use lazy_static::lazy_static;
 use log::debug;
 use log::trace;
-use regex::Regex;
 use reqwest::header;
 use serde::{Deserialize, Deserializer};
 
@@ -81,10 +79,17 @@ fn raw_github_events(json: &str) -> Result<Vec<RawEvent>, serde_json::Error> {
 }
 
 fn last_page_from_link_header(link_header: &str) -> Option<u32> {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(".*page=(\\d+)>; rel=\"last\".*").unwrap();
-    }
-    RE.captures(link_header).map(|c| c[1].parse().unwrap())
+    link_header.split(',').find_map(|link| {
+        let (url, params) = link.split_once('>')?;
+        if !params.contains("rel=\"last\"") {
+            return None;
+        }
+
+        url.split_once('?')?.1.split('&').find_map(|parameter| {
+            let (name, value) = parameter.split_once('=')?;
+            (name == "page").then(|| value.parse().ok()).flatten()
+        })
+    })
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
@@ -228,6 +233,14 @@ mod tests {
             "<https://api.github.com/repositories/257951013/events?page=1>; rel=\"prev\", <https://api.github.com/repositories/257951013/events?page=3>; rel=\"next\", <https://api.github.com/repositories/257951013/events?page=10>; rel=\"last\", <https://api.github.com/repositories/257951013/events?page=1>; rel=\"first\"",
         );
         assert_eq!(last_page, Some(10));
+    }
+
+    #[test]
+    fn parse_github_link_header_with_additional_query_parameters() {
+        let last_page = last_page_from_link_header(
+            "<https://api.github.com/repositories/257951013/events?page=2>; rel=\"next\", <https://api.github.com/repositories/257951013/events?per_page=100&page=42>; rel=\"last\"",
+        );
+        assert_eq!(last_page, Some(42));
     }
 
     #[test]
