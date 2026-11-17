@@ -1,99 +1,132 @@
 use std::collections::HashMap;
+use std::error::Error;
 use std::ffi::OsString;
 use std::fmt::Write as _;
-use std::str;
+use std::io;
 use std::sync::mpsc;
-use std::thread;
 
-use log::debug;
-use log::info;
-use serde::Deserialize;
-use serde::Serialize;
-use structopt::StructOpt;
-
-use crate::github_events::{Action, RawEvent, Type, github_events as _github_events};
+use crate::github_events::{Action, RawEvent, Type, github_events};
 
 pub mod github_events;
 
-#[derive(Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Config {
     pub repos: Vec<String>,
     pub token: Option<String>,
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(
-    about = "Display simple counters for GitHub Pull Requests",
-    author = "Nicolas Kosinski <nicokosi@yahoo.com>",
-    name = "Pullpito 🐙",
-    version = "0.1.0"
-)]
-struct Options {
-    #[structopt(
-        long = "repository",
-        help = "the name of a GitHub repository, i.e. 'python/peps'",
-        required = true,
-        takes_value = true,
-        multiple = true,
-        short = "r"
-    )]
-    repositories: Vec<String>,
+fn config_from_args(args: impl IntoIterator<Item = OsString>) -> Result<Config, String> {
+    let mut args = args.into_iter();
+    args.next();
 
-    #[structopt(
-        help = "an optional GitHub personal access token (required for private GitHub repositories)",
-        long = "token",
-        short = "t"
-    )]
-    token: Option<String>,
-}
+    let mut repos = Vec::new();
+    let mut token = None;
+    while let Some(argument) = args.next() {
+        let argument = argument
+            .into_string()
+            .map_err(|_| "arguments must be valid UTF-8".to_owned())?;
+        let (option, inline_value) = argument
+            .split_once('=')
+            .map_or((argument.as_str(), None), |(option, value)| {
+                (option, Some(value.to_owned()))
+            });
 
-fn config_from_args(args: Vec<OsString>) -> Config {
-    let options = Options::from_iter(args);
-    Config {
-        repos: options.repositories,
-        token: options.token,
+        match option {
+            "--repository" | "-r" => {
+                repos.push(option_value(option, inline_value, &mut args)?);
+            }
+            "--token" | "-t" => {
+                token = Some(option_value(option, inline_value, &mut args)?);
+            }
+            _ => return Err(format!("unknown argument: {argument}")),
+        }
     }
+
+    if repos.is_empty() {
+        return Err("at least one --repository (-r) is required".to_owned());
+    }
+
+    Ok(Config { repos, token })
 }
 
-/// Calls GitHub REST API in order to log pull requests' statistics in the standard output.
-///
-/// # Panics
-///
-/// Panics if the GitHub API request fails or if response cannot be deserialized.
-pub fn log_github_events(os: Vec<OsString>) {
-    env_logger::init();
-    let config = config_from_args(os);
-    info!(
-        "Computing stats for GitHub repos '{:?}' (with token: {})",
-        config.repos,
-        config.token.is_some()
-    );
+fn option_value(
+    option: &str,
+    inline_value: Option<String>,
+    args: &mut impl Iterator<Item = OsString>,
+) -> Result<String, String> {
+    let value = match inline_value {
+        Some(value) => value,
+        None => args
+            .next()
+            .ok_or_else(|| format!("missing value for {option}"))?
+            .into_string()
+            .map_err(|_| format!("value for {option} must be valid UTF-8"))?,
+    };
+    if value.is_empty() {
+        return Err(format!("value for {option} cannot be empty"));
+    }
+    Ok(value)
+}
 
+/// Fetches GitHub events and prints pull request counters for each repository.
+pub fn run(args: impl IntoIterator<Item = OsString>) -> Result<(), Box<dyn Error + Send + Sync>> {
+    let args: Vec<_> = args.into_iter().collect();
+    if args
+        .iter()
+        .skip(1)
+        .any(|arg| arg == "--help" || arg == "-h")
+    {
+        print_help();
+        return Ok(());
+    }
+    if args
+        .iter()
+        .skip(1)
+        .any(|arg| arg == "--version" || arg == "-V")
+    {
+        println!("pullpito {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
+    let config = config_from_args(args).map_err(io::Error::other)?;
     let (sender, receiver) = mpsc::channel();
     let number_of_repos = config.repos.len();
 
-    for repo in config.repos {
-        debug!("Query stats for GitHub repo {repo:?}");
-        let sender = mpsc::Sender::clone(&sender);
-        let token = config.token.clone();
-        thread::spawn(move || {
-            sender
-                .send(RepoEvents {
-                    repo: repo.clone(),
-                    events_per_author: events_per_author(_github_events(&repo, &token).unwrap()),
-                })
-                .unwrap();
-        });
-    }
+    std::thread::scope(|scope| -> Result<(), Box<dyn Error + Send + Sync>> {
+        for repo in config.repos {
+            let sender = sender.clone();
+            let token = config.token.as_deref();
+            scope.spawn(move || {
+                let result = github_events(&repo, token).map(|events| RepoEvents {
+                    repo,
+                    events_per_author: events_per_author(events),
+                });
+                let _ = sender.send(result);
+            });
+        }
+        drop(sender);
 
-    for _ in 0..number_of_repos {
-        let repo_events = receiver.recv().unwrap();
-        debug!("Print stats for GitHub repo {:?}", repo_events.repo);
-        println!(
-            "{}",
-            print_events_per_author(&repo_events.repo, &repo_events.events_per_author)
-        );
-    }
+        for _ in 0..number_of_repos {
+            let repo_events = receiver.recv().map_err(io::Error::other)??;
+            println!(
+                "{}",
+                print_events_per_author(&repo_events.repo, &repo_events.events_per_author)
+            );
+        }
+        Ok(())
+    })
+}
+
+fn print_help() {
+    println!(
+        "Pullpito 🐙 {}\nDisplay simple counters for GitHub Pull Requests\n\n\
+         Usage: pullpito --repository <ORG/REPO>... [--token <TOKEN>]\n\n\
+         Options:\n  \
+         -r, --repository <ORG/REPO>  GitHub repository (repeatable)\n  \
+         -t, --token <TOKEN>          GitHub token for private repositories\n  \
+         -h, --help                   Print help\n  \
+         -V, --version                Print version",
+        env!("CARGO_PKG_VERSION")
+    );
 }
 
 struct RepoEvents {
@@ -102,47 +135,50 @@ struct RepoEvents {
 }
 
 fn events_per_author(events: Vec<RawEvent>) -> HashMap<String, Vec<RawEvent>> {
-    events
-        .into_iter()
-        .filter(|e| {
-            e.event_type == Type::PullRequestEvent
-                || e.event_type == Type::PullRequestReviewCommentEvent
-                || e.event_type == Type::IssueCommentEvent
-        })
-        .fold(HashMap::new(), |mut acc, event: RawEvent| {
-            (*acc.entry(event.actor.login.clone()).or_default()).push(event);
-            acc
-        })
+    let mut grouped = HashMap::new();
+    for event in events.into_iter().filter(|event| {
+        matches!(
+            event.event_type,
+            Type::PullRequestEvent | Type::PullRequestReviewCommentEvent | Type::IssueCommentEvent
+        )
+    }) {
+        grouped
+            .entry(event.actor.login.clone())
+            .or_insert_with(Vec::new)
+            .push(event);
+    }
+    grouped
 }
 
 fn print_events_per_author(
     repo: &str,
     events_per_author: &HashMap<String, Vec<RawEvent>>,
 ) -> String {
-    let mut out: String = format!("pull requests for {repo:?} ->\n");
-    out.push_str("  opened per author:\n");
-    print_pull_request_events_per_author(events_per_author, &Action::opened, &mut out);
-    out.push_str("  commented per author:\n");
-    print_pull_request_events_per_author(events_per_author, &Action::created, &mut out);
-    out.push_str("  closed per author:\n");
-    print_pull_request_events_per_author(events_per_author, &Action::closed, &mut out);
-    out
+    let mut output = format!("pull requests for {repo:?} ->\n");
+    output.push_str("  opened per author:\n");
+    print_pull_request_events_per_author(events_per_author, &Action::opened, &mut output);
+    output.push_str("  commented per author:\n");
+    print_pull_request_events_per_author(events_per_author, &Action::created, &mut output);
+    output.push_str("  closed per author:\n");
+    print_pull_request_events_per_author(events_per_author, &Action::closed, &mut output);
+    output
 }
 
 fn print_pull_request_events_per_author(
     events_per_author: &HashMap<String, Vec<RawEvent>>,
     payload_action: &Action,
-    out: &mut String,
+    output: &mut String,
 ) {
     for (author, events) in events_per_author {
-        let matching_pull_requests = events
+        let count = events
             .iter()
-            .filter(|e| {
-                e.event_type == Type::PullRequestEvent && &e.payload.action == payload_action
+            .filter(|event| {
+                event.event_type == Type::PullRequestEvent
+                    && &event.payload.action == payload_action
             })
             .count();
-        if matching_pull_requests > 0 {
-            let _ = writeln!(out, "    {author}: {matching_pull_requests}");
+        if count > 0 {
+            let _ = writeln!(output, "    {author}: {count}");
         }
     }
 }
@@ -151,123 +187,68 @@ fn print_pull_request_events_per_author(
 mod tests {
     use std::collections::HashMap;
 
-    use chrono::{TimeZone, Utc};
-
-    use crate::Config;
-    use crate::OsString;
-    use crate::config_from_args;
-    use crate::events_per_author;
-    use crate::print_events_per_author;
-
-    use super::github_events::*;
+    use crate::github_events::{Action, Actor, Payload, RawEvent, Type};
+    use crate::{Config, config_from_args, events_per_author, print_events_per_author};
 
     #[test]
-    fn parse_args_with_a_long_repo_param() {
+    fn parse_repeated_repositories_and_token() {
+        let config = config_from_args([
+            "pullpito".into(),
+            "--repository".into(),
+            "org/one".into(),
+            "-r".into(),
+            "org/two".into(),
+            "--token=secret".into(),
+        ])
+        .unwrap();
         assert_eq!(
-            config_from_args(vec![
-                OsString::from("pullpito"),
-                OsString::from("--repository"),
-                OsString::from("fakeRepo"),
-            ]),
+            config,
             Config {
-                repos: vec!["fakeRepo".to_string()],
-                token: None,
-            },
-        );
-    }
-
-    #[test]
-    fn parse_args_with_a_long_repo_param_and_a_long_token_param() {
-        assert_eq!(
-            config_from_args(vec![
-                OsString::from("pullpito"),
-                OsString::from("--repository"),
-                OsString::from("fakeRepo"),
-                OsString::from("--token"),
-                OsString::from("fakeToken"),
-            ]),
-            Config {
-                repos: vec!["fakeRepo".to_string()],
-                token: Some("fakeToken".to_string()),
+                repos: vec!["org/one".to_owned(), "org/two".to_owned()],
+                token: Some("secret".to_owned()),
             }
         );
     }
 
     #[test]
-    fn parse_args_with_two_long_repo_params_and_a_long_token_param() {
-        assert_eq!(
-            config_from_args(vec![
-                OsString::from("pullpito"),
-                OsString::from("--repository"),
-                OsString::from("fakeRepo1"),
-                OsString::from("--repository"),
-                OsString::from("fakeRepo2"),
-                OsString::from("--token"),
-                OsString::from("fakeToken"),
-            ]),
-            Config {
-                repos: vec!["fakeRepo1".to_string(), "fakeRepo2".to_string()],
-                token: Some("fakeToken".to_string()),
-            }
-        );
-    }
-
-    #[test]
-    fn parse_args_with_two_short_repo_params_and_a_short_token_param() {
-        assert_eq!(
-            config_from_args(vec![
-                OsString::from("pullpito"),
-                OsString::from("-r"),
-                OsString::from("fakeRepo1"),
-                OsString::from("-r"),
-                OsString::from("fakeRepo2"),
-                OsString::from("-t"),
-                OsString::from("fakeToken"),
-            ]),
-            Config {
-                repos: vec!["fakeRepo1".to_string(), "fakeRepo2".to_string()],
-                token: Some("fakeToken".to_string()),
-            }
-        );
+    fn rejects_missing_repository() {
+        assert!(config_from_args(["pullpito".into()]).is_err());
     }
 
     #[test]
     fn printable_with_opened_pull_request() {
-        let mut events: HashMap<String, Vec<RawEvent>> = HashMap::new();
-        events.insert(
-            "alice".to_string(),
+        let events = HashMap::from([(
+            "alice".to_owned(),
             vec![RawEvent {
                 actor: Actor {
-                    login: "alice".to_string(),
+                    login: "alice".to_owned(),
                 },
                 payload: Payload {
                     action: Action::opened,
                 },
                 event_type: Type::PullRequestEvent,
-                created_at: Utc.with_ymd_and_hms(2016, 12, 1, 16, 26, 43).unwrap(),
+                created_at: "2016-12-01T16:26:43Z".to_owned(),
             }],
-        );
+        )]);
 
         let printable = print_events_per_author("my-org/my-repo", &events);
-
         assert!(printable.contains("pull requests for \"my-org/my-repo\" ->"));
-        assert!(printable.contains("opened per author:\n    alice: 1\n"));
         assert!(printable.contains("opened per author:\n    alice: 1\n"));
         assert!(printable.contains("commented per author:\n  closed per author:\n"));
     }
 
     #[test]
-    fn compute_events_per_author() {
-        let events_per_author = events_per_author(vec![RawEvent {
+    fn groups_only_pull_request_related_events() {
+        let event = RawEvent {
             actor: Actor {
-                login: "alice".to_string(),
+                login: "alice".to_owned(),
             },
             payload: Payload {
                 action: Action::opened,
             },
             event_type: Type::PullRequestEvent,
-            created_at: Utc.with_ymd_and_hms(2016, 12, 1, 16, 26, 43).unwrap(),
-        }]);
-        assert_eq!(events_per_author.get("alice").iter().len(), 1);
+            created_at: "2016-12-01T16:26:43Z".to_owned(),
+        };
+        assert_eq!(events_per_author(vec![event]).len(), 1);
     }
 }
