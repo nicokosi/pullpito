@@ -1,81 +1,51 @@
-use std::io::Error;
-use std::str;
+use std::error::Error;
 
-use chrono::{DateTime, Utc};
-use log::debug;
-use log::trace;
+use reqwest::StatusCode;
 use reqwest::header;
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 
-pub(crate) fn github_events(repo: &str, token: &Option<String>) -> Result<Vec<RawEvent>, Error> {
-    let mut raw_events: Vec<RawEvent> = Vec::new();
+pub(crate) fn github_events(
+    repo: &str,
+    token: Option<&str>,
+) -> Result<Vec<RawEvent>, Box<dyn Error + Send + Sync>> {
+    let client = reqwest::blocking::Client::builder()
+        .user_agent("nicokosi/pullpito")
+        .build()?;
+    let mut raw_events = Vec::new();
+
     for page in 1..10 {
-        let token = token.clone();
         let url = format!("https://api.github.com/repos/{repo}/events?page={page}");
-        let mut headers = header::HeaderMap::new();
-        headers.insert(header::USER_AGENT, "nicokosi/pullpito".parse().unwrap());
-        if token.is_some() {
-            let mut value = "token ".to_string();
-            value.push_str(&token.unwrap_or_default());
-            headers.insert(header::AUTHORIZATION, value.parse().unwrap());
+        let mut request = client.get(&url);
+        if let Some(token) = token {
+            request = request.header(header::AUTHORIZATION, format!("token {token}"));
         }
-        trace!("GET {}\n  headers: {:?}", url.as_str(), headers);
-        let resp = reqwest::blocking::Client::new()
-            .get(url.as_str())
-            .headers(headers)
-            .send()
-            .unwrap();
-        let headers = resp.headers().clone();
-        let body = match resp.text() {
-            Ok(body) => {
-                if body.len() <= "[]".len() {
-                    debug!("No more content for {repo:?} (page number: {page})");
-                    break;
-                }
-                debug!("Content found for {repo:?} (page number: {page})");
-                trace!("Content found for {repo:?} (page number: {page}): {body:?}");
-                body
-            }
-            Err(error) => {
-                if error.status() == Some(reqwest::StatusCode::UNPROCESSABLE_ENTITY) {
-                    debug!("No more content for {repo:?} (page number: {page})");
-                    break;
-                }
-                debug!("Oops, something went wrong with GitHub API {error:?}");
-                return Err(Error::other(format!(
-                    "Cannot get GitHub API content: {error}"
-                )));
-            }
+
+        let response = request.send()?;
+        if response.status() == StatusCode::UNPROCESSABLE_ENTITY {
+            break;
+        }
+        let response = response.error_for_status()?;
+        let headers = response.headers().clone();
+        let body = response.text()?;
+        if body.len() <= "[]".len() {
+            break;
+        }
+
+        raw_events.extend(serde_json::from_str::<Vec<RawEvent>>(&body)?);
+        let Some(link_header) = headers.get(header::LINK) else {
+            break;
         };
-
-        let mut raw_events_per_page =
-            raw_github_events(&body).expect("Cannot deserialize GitHub API content");
-        raw_events.append(&mut raw_events_per_page);
-
-        // Stop iterating on event pages if current page is the last one
-        match headers.get("Link").as_ref() {
-            Some(link_header) => {
-                let link_header = link_header.as_bytes();
-                let last_page = last_page_from_link_header(str::from_utf8(link_header).unwrap());
-                debug!("Last page: {last_page:?} (current page: {page})");
-                match last_page {
-                    Some(last_page) => {
-                        if page == last_page {
-                            break;
-                        }
-                    }
-                    None => break,
-                }
-            }
-            None => break,
+        let Some(link_header) = link_header.to_str().ok() else {
+            break;
+        };
+        let Some(last_page) = last_page_from_link_header(link_header) else {
+            break;
+        };
+        if page == last_page {
+            break;
         }
     }
     Ok(raw_events)
-}
-
-fn raw_github_events(json: &str) -> Result<Vec<RawEvent>, serde_json::Error> {
-    debug!("{json}");
-    serde_json::from_str::<Vec<RawEvent>>(json)
 }
 
 fn last_page_from_link_header(link_header: &str) -> Option<u32> {
@@ -96,13 +66,9 @@ fn last_page_from_link_header(link_header: &str) -> Option<u32> {
 pub struct RawEvent {
     pub actor: Actor,
     pub payload: Payload,
-    #[serde(
-        rename = "type",
-        deserialize_with = "deserialize_field_type",
-        default = "Type::default"
-    )]
+    #[serde(rename = "type", default)]
     pub event_type: Type,
-    pub created_at: DateTime<Utc>,
+    pub created_at: String,
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
@@ -112,14 +78,11 @@ pub struct Actor {
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
 pub struct Payload {
-    #[serde(
-        deserialize_with = "deserialize_field_action",
-        default = "Action::default"
-    )]
+    #[serde(default)]
     pub action: Action,
 }
 
-#[derive(Debug, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Default, Deserialize, Eq, PartialEq)]
 pub enum Action {
     #[allow(non_camel_case_types)]
     created,
@@ -127,133 +90,94 @@ pub enum Action {
     closed,
     #[allow(non_camel_case_types)]
     opened,
-    #[serde(skip_deserializing)]
+    #[default]
+    #[serde(other)]
     Unknown,
 }
-impl Action {
-    const fn default() -> Self {
-        Self::Unknown
-    }
-}
 
-fn deserialize_field_action<'de, D>(deserializer: D) -> Result<Action, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    Action::deserialize(deserializer).or(Ok(Action::Unknown))
-}
-
-#[derive(Debug, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Default, Deserialize, Eq, PartialEq)]
 pub enum Type {
     IssueCommentEvent,
     PullRequestEvent,
     PullRequestReviewCommentEvent,
-    #[serde(skip_deserializing)]
+    #[default]
+    #[serde(other)]
     Unknown,
-}
-impl Type {
-    const fn default() -> Self {
-        Self::Unknown
-    }
-}
-
-fn deserialize_field_type<'de, D>(deserializer: D) -> Result<Type, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    Type::deserialize(deserializer).or(Ok(Type::Unknown))
 }
 
 #[cfg(test)]
 mod tests {
-    use chrono::{TimeZone, Utc};
-
     use super::*;
 
     #[test]
     fn parse_github_events() {
+        let event: RawEvent =
+            serde_json::from_str::<Vec<RawEvent>>(include_str!("../../test/github_events.json"))
+                .unwrap()
+                .remove(0);
         assert_eq!(
-            raw_github_events(include_str!("../../test/github_events.json")).unwrap()[0],
+            event,
             RawEvent {
                 actor: Actor {
-                    login: "alice".to_string(),
+                    login: "alice".to_owned(),
                 },
                 payload: Payload {
                     action: Action::opened,
                 },
                 event_type: Type::PullRequestEvent,
-                created_at: Utc.with_ymd_and_hms(2016, 12, 1, 16, 26, 43).unwrap(),
+                created_at: "2016-12-01T16:26:43Z".to_owned(),
             }
         );
     }
 
     #[test]
     fn parse_github_event_with_unknown_enums() {
-        assert_eq!(
-            raw_github_events(include_str!(
-                "../../test/github_event_with_unknown_enums.json"
-            ))
-            .unwrap()[0],
-            RawEvent {
-                actor: Actor {
-                    login: "alice".to_string(),
-                },
-                payload: Payload {
-                    action: Action::Unknown,
-                },
-                event_type: Type::Unknown,
-                created_at: Utc.with_ymd_and_hms(2016, 12, 1, 16, 26, 43).unwrap(),
-            }
-        );
+        let event: RawEvent = serde_json::from_str::<Vec<RawEvent>>(include_str!(
+            "../../test/github_event_with_unknown_enums.json"
+        ))
+        .unwrap()
+        .remove(0);
+        assert_eq!(event.payload.action, Action::Unknown);
+        assert_eq!(event.event_type, Type::Unknown);
     }
 
     #[test]
-    fn parse_real_github_events_from_nicokosi_pullpito() {
-        let events = raw_github_events(include_str!("../../test/pullpito_github_events.json"));
-        assert!(events.is_ok());
-    }
-
-    #[test]
-    fn parse_real_github_events_from_python_peps() {
-        let events = raw_github_events(include_str!("../../test/python_peps_github_events.json"));
-        assert!(events.is_ok());
+    fn parse_real_github_event_fixtures() {
+        for fixture in [
+            include_str!("../../test/pullpito_github_events.json"),
+            include_str!("../../test/python_peps_github_events.json"),
+        ] {
+            let events: Vec<RawEvent> = serde_json::from_str(fixture).unwrap();
+            assert!(!events.is_empty());
+        }
     }
 
     #[test]
     fn parse_github_link_header_for_page_1_over_10() {
-        let last_page = last_page_from_link_header(
-            "<https://api.github.com/repositories/257951013/events?page=2>; rel=\"next\", <https://api.github.com/repositories/257951013/events?page=10>; rel=\"last\"",
-        );
-        assert_eq!(last_page, Some(10));
+        let link_header = "<https://api.github.com/repositories/257951013/events?page=2>; rel=\"next\", <https://api.github.com/repositories/257951013/events?page=10>; rel=\"last\"";
+        assert_eq!(last_page_from_link_header(link_header), Some(10));
     }
 
     #[test]
     fn parse_github_link_header_for_page_2_over_10() {
-        let last_page = last_page_from_link_header(
-            "<https://api.github.com/repositories/257951013/events?page=1>; rel=\"prev\", <https://api.github.com/repositories/257951013/events?page=3>; rel=\"next\", <https://api.github.com/repositories/257951013/events?page=10>; rel=\"last\", <https://api.github.com/repositories/257951013/events?page=1>; rel=\"first\"",
-        );
-        assert_eq!(last_page, Some(10));
+        let link_header = "<https://api.github.com/repositories/257951013/events?page=1>; rel=\"prev\", <https://api.github.com/repositories/257951013/events?page=3>; rel=\"next\", <https://api.github.com/repositories/257951013/events?page=10>; rel=\"last\", <https://api.github.com/repositories/257951013/events?page=1>; rel=\"first\"";
+        assert_eq!(last_page_from_link_header(link_header), Some(10));
     }
 
     #[test]
     fn parse_github_link_header_with_additional_query_parameters() {
-        let last_page = last_page_from_link_header(
-            "<https://api.github.com/repositories/257951013/events?page=2>; rel=\"next\", <https://api.github.com/repositories/257951013/events?per_page=100&page=42>; rel=\"last\"",
-        );
-        assert_eq!(last_page, Some(42));
+        let link_header = "<https://api.github.com/repositories/257951013/events?page=2>; rel=\"next\", <https://api.github.com/repositories/257951013/events?per_page=100&page=42>; rel=\"last\"";
+        assert_eq!(last_page_from_link_header(link_header), Some(42));
     }
 
     #[test]
-    fn parse_github_link_header_for_page_10_over_10() {
-        let last_page = last_page_from_link_header(
-            "<https://api.github.com/repositories/257951013/events?page=9>; rel=\"prev\", <https://api.github.com/repositories/257951013/events?page=1>; rel=\"first\"",
+    fn parse_github_link_header_without_last_page() {
+        assert_eq!(
+            last_page_from_link_header(
+                "<https://api.github.com/repositories/257951013/events?page=9>; rel=\"prev\", <https://api.github.com/repositories/257951013/events?page=1>; rel=\"first\""
+            ),
+            None
         );
-        assert_eq!(last_page, None);
-    }
-
-    #[test]
-    fn parse_github_link_header_can_fail_because_of_unknown_header_value() {
-        let last_page = last_page_from_link_header("moo");
-        assert_eq!(last_page, None);
+        assert_eq!(last_page_from_link_header("moo"), None);
     }
 }

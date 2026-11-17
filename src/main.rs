@@ -1,5 +1,5 @@
 use std::env;
 
-fn main() {
-    pullpito::log_github_events(env::args_os().collect());
+fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pullpito::run(env::args_os())
 }
